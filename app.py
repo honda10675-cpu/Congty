@@ -261,45 +261,38 @@ with tab2:
   conn.close()
 
   if not df.empty:
-    # TẠO BẢNG HTML CÓ SỐ THỨ TỰ 1/, 2/ VÀ XUỐNG DÒNG RÕ RÀNG Ở CỘT DỰ KIẾN
-    rows_html = ""
+    # HIỂN THỊ BẢNG HTML CHUẨN
+    rows_list = []
     for idx, row in df.iterrows():
       stt = f"{idx + 1}/"
-
-      # Tách ngày và giờ dự kiến để hiển thị 2 dòng gọn gàng
       du_kien_val = str(row["du_kien_xong"])
       if " " in du_kien_val:
         parts = du_kien_val.split(" ")
-        du_kien_display = f"{parts[0]}<br><b style='color:#2d6a4f;'>{parts[1]}</b>"
+        du_kien_display = (
+            f"{parts[0]}<br><span style='color:#2d6a4f;"
+            f" font-weight:bold;'>{parts[1]}</span>"
+        )
       else:
         du_kien_display = du_kien_val
 
-      rows_html += f"""
-            <tr>
-                <td style="width: 8%; font-weight: bold; color: #2d6a4f;">{stt}</td>
-                <td style="width: 18%; font-weight: bold;">{row['thiet_bi']}</td>
-                <td style="width: 46%; text-align: left;">{row['ten_su_co']} <span style="color:#666; font-size:10px;">({row['thoi_gian_bao']})</span></td>
-                <td style="width: 28%;">{du_kien_display}</td>
-            </tr>
-            """
+      row_html = (
+          f"<tr><td style='width: 8%; font-weight: bold;"
+          f" color: #2d6a4f;'>{stt}</td><td style='width: 18%; font-weight:"
+          f" bold;'>{row['thiet_bi']}</td><td style='width: 46%; text-align:"
+          f" left;'>{row['ten_su_co']} <span style='color:#666;"
+          f" font-size:10px;'>({row['thoi_gian_bao']})</span></td><td"
+          f" style='width: 28%;'>{du_kien_display}</td></tr>"
+      )
+      rows_list.append(row_html)
 
-    table_html = f"""
-        <div class="mobile-table-container">
-            <table class="mobile-table">
-                <thead>
-                    <tr>
-                        <th style="width: 8%;">STT</th>
-                        <th style="width: 18%;">MÁY</th>
-                        <th style="width: 46%;">SỰ CỐ (TG BÁO)</th>
-                        <th style="width: 28%;">DỰ KIẾN</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {rows_html}
-                </tbody>
-            </table>
-        </div>
-        """
+    all_rows = "".join(rows_list)
+    table_html = (
+        f'<div class="mobile-table-container"><table'
+        ' class="mobile-table"><thead><tr><th style="width: 8%;">STT</th><th'
+        ' style="width: 18%;">MÁY</th><th style="width: 46%;">SỰ CỐ (TG'
+        ' BÁO)</th><th style="width:'
+        f' 28%;">DỰ KIẾN</th></tr></thead><tbody>{all_rows}</tbody></table></div>'
+    )
 
     st.markdown(table_html, unsafe_allow_html=True)
 
@@ -323,7 +316,6 @@ with tab2:
           else "N/A"
       )
 
-      # BỎ HOÀN TOÀN DÒNG CHỮ "BÁO CÁO SỰ CỐ"
       single_text = (
           f"MÁY: {selected_row['thiet_bi']}\n"
           f"THỜI GIAN BÁO: {selected_row['thoi_gian_bao']}\n"
