@@ -39,99 +39,103 @@ def init_db():
 
 init_db()
 
-# CSS ẨN HOÀN TOÀN LOGO & TỐI ƯU HIỂN THỊ 1 MÀN HÌNH
+# CSS CAN THIỆP SÂU - ÉP 1 HÀNG DỌC DI ĐỘNG & ẨN LOGO
 st.markdown(
     """
     <style>
-    /* 1. Ẩn hoàn toàn logo Streamlit, Crown, Footer và Header */
+    /* 1. AN TRIET DE LOGO STREAMLIT & HOSTING BADGE */
     header, footer, #MainMenu, [data-testid="stToolbar"], 
     .stAppDeployButton, [data-testid="stStatusWidget"],
     div[class*="viewerBadge"], div[class*="styles_viewerBadge"],
-    a[href*="streamlit.io"], iframe[title*="Streamlit"] {
+    a[href*="streamlit.io"], iframe[title*="Streamlit"],
+    .stApp > footer, [data-testid="stHeader"] {
         display: none !important;
         visibility: hidden !important;
         opacity: 0 !important;
-        height: 0 !important;
-        width: 0 !important;
+        pointer-events: none !important;
     }
-    
+
     .stApp { background-color: #f4fbf7; color: #1b4332; }
-    
-    /* 2. Co lề tối đa cho vừa gọn 1 màn hình di động */
+
+    /* 2. KHU VUC LỀ SIÊU GỌN VỪA KHÍT MÀN HÌNH */
     .block-container { 
-        padding-top: 0.2rem !important; 
-        padding-bottom: 0.2rem !important; 
-        padding-left: 0.4rem !important; 
-        padding-right: 0.4rem !important; 
+        padding-top: 0.1rem !important; 
+        padding-bottom: 0.1rem !important; 
+        padding-left: 0.2rem !important; 
+        padding-right: 0.2rem !important; 
     }
-    
-    /* 3. Thu nhỏ phông chữ tiêu đề */
-    h1 { font-size: 1.0rem !important; margin: 0 !important; font-weight: 800 !important; text-align: center; color: #1b4332; }
-    
-    /* 4. Khung Form siêu gọn */
+
+    h1 { font-size: 0.95rem !important; margin: 0 !important; font-weight: 800 !important; text-align: center; }
+
+    /* 3. ĐỊNH DẠNG BẢNG HTML VỪA VẶN 1 HÀNG NGANG MÀN HÌNH DI ĐỘNG */
+    .custom-table-container {
+        width: 100%;
+        overflow-x: hidden;
+        margin-bottom: 5px;
+    }
+    .custom-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 10px !important;
+        background-color: #ffffff;
+    }
+    .custom-table th {
+        background-color: #2d6a4f;
+        color: #ffffff;
+        padding: 4px 2px;
+        text-align: center;
+        border: 1px solid #52b788;
+        font-size: 10px;
+        white-space: nowrap;
+    }
+    .custom-table td {
+        padding: 4px 2px;
+        border: 1px solid #b7e4c7;
+        text-align: center;
+        word-wrap: break-word;
+        font-size: 10px;
+    }
+
+    /* 4. TỐI ƯU FORM NHẬP */
     div[data-testid="stForm"] { 
         background-color: #ffffff; 
         border: 1.5px solid #52b788; 
-        border-radius: 8px; 
-        padding: 4px 8px !important; 
+        border-radius: 6px; 
+        padding: 4px 6px !important; 
     }
-    
-    /* 5. Giảm khoảng cách giữa các ô nhập liệu */
+
     .stTextInput label, .stSelectbox label, .stDateInput label { 
-        font-size: 11px !important; 
+        font-size: 10px !important; 
         margin-bottom: 0px !important; 
-        padding-bottom: 0px !important;
         font-weight: bold;
     }
-    
-    div[data-testid="stVerticalBlock"] > div {
-        gap: 0.15rem !important;
-    }
-    
-    /* Chiều cao ô nhập liệu chuẩn */
+
+    div[data-testid="stVerticalBlock"] > div { gap: 0.1rem !important; }
+
     .stTextInput input, div[data-baseweb="select"], div[data-baseweb="input"] { 
         background-color: #f8fff9 !important; 
         border: 1px solid #74c69d !important; 
-        border-radius: 5px !important; 
-        color: #1b4332 !important; 
-        font-size: 12px !important; 
-        height: 32px !important; 
-        min-height: 32px !important;
+        border-radius: 4px !important; 
+        font-size: 11px !important; 
+        height: 30px !important; 
+        min-height: 30px !important;
     }
-    
-    /* Nút bấm lớn vừa tay */
+
     .stButton button, button[kind="FormSubmitButton"] { 
         background: linear-gradient(90deg, #2d6a4f 0%, #40916c 100%) !important; 
         color: white !important; 
         font-weight: bold !important; 
-        border-radius: 6px !important; 
-        width: 100%; 
-        font-size: 13px !important; 
-        height: 36px !important; 
-        min-height: 36px !important;
+        border-radius: 5px !important; 
+        font-size: 12px !important; 
+        height: 34px !important; 
+        min-height: 34px !important;
         margin-top: 2px !important; 
     }
-    
-    /* Tab bar siêu gọn */
+
     button[data-baseweb="tab"] { 
-        font-size: 12px !important; 
+        font-size: 11px !important; 
         font-weight: bold !important; 
-        padding: 2px 6px !important;
-    }
-    
-    /* Khung hiển thị nội dung Copy xuống dòng chuẩn */
-    .copy-box {
-        background-color: #ffffff;
-        border: 1px solid #74c69d;
-        border-radius: 6px;
-        padding: 8px;
-        font-family: monospace;
-        font-size: 12px;
-        line-height: 1.4;
-        white-space: pre-wrap;
-        word-break: break-word;
-        color: #1b4332;
-        margin-top: 4px;
+        padding: 2px 4px !important;
     }
     </style>
 """,
@@ -265,20 +269,37 @@ with tab2:
   conn.close()
 
   if not df.empty:
-    df_display = df.drop(columns=["id"]).rename(
-        columns={
-            "thiet_bi": "MÁY",
-            "thoi_gian_bao": "TG BÁO",
-            "ten_su_co": "SỰ CỐ",
-            "du_kien_xong": "TG DỰ KIẾN",
-            "nguoi_bao_cao": "NGƯỜI BÁO",
-            "trang_thai": "TRẠNG THÁI",
-            "thoi_gian_xong": "TG XONG",
-        }
-    )
-    st.dataframe(df_display, use_container_width=True, height=100)
+    # TỰ TẠO BẢNG HTML SIÊU NHẸ NÉN VỪA 1 HÀNG MÀN HÌNH DI ĐỘNG
+    table_html = """
+        <div class="custom-table-container">
+            <table class="custom-table">
+                <thead>
+                    <tr>
+                        <th style="width: 15%;">MÁY</th>
+                        <th style="width: 25%;">TG BÁO</th>
+                        <th style="width: 35%;">SỰ CỐ</th>
+                        <th style="width: 25%;">DỰ KIẾN</th>
+                    </tr>
+                </thead>
+                <tbody>
+        """
+    for _, row in df.iterrows():
+      table_html += f"""
+                <tr>
+                    <td><b>{row['thiet_bi']}</b></td>
+                    <td>{row['thoi_gian_bao']}</td>
+                    <td style="text-align: left;">{row['ten_su_co']}</td>
+                    <td>{row['du_kien_xong']}</td>
+                </tr>
+            """
+    table_html += """
+                </tbody>
+            </table>
+        </div>
+        """
+    st.markdown(table_html, unsafe_allow_html=True)
 
-    # SAO CHÉP TỪNG SỰ CỐ CÓ XUỐNG DÒNG RÕ RÀNG
+    # SAO CHÉP SỰ CỐ
     su_co_list = [
         f"{row['thiet_bi']} - {row['ten_su_co']} [{row['trang_thai']}]"
         for _, row in df.iterrows()
@@ -309,10 +330,9 @@ with tab2:
         single_text += f"THỜI GIAN HOÀN THÀNH THỰC TẾ: {selected_row['thoi_gian_xong']}\n"
       single_text += f"NGƯỜI BÁO CÁO: {nguoi_gui}"
 
-      # Hiển thị mã sao chép xuống dòng chuẩn
       st.code(single_text, language="text")
 
-    # CẬP NHẬT HOÀN THÀNH
+    # XÁC NHẬN HOÀN THÀNH
     pending_df = df[df["trang_thai"] != "✅ Đã xong"]
     if not pending_df.empty:
       done_list = [
