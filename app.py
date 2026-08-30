@@ -1,7 +1,12 @@
-import sqlite3
 from datetime import datetime, timedelta, timezone
 import pandas as pd
 import streamlit as st
+from supabase import create_client
+
+SUPABASE_URL = "https://sndzaqqqrxoqlzemgboy.supabase.co"
+SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNuZHphcXFxcnhvcWx6ZW1nYm95Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgxMDM1MDMsImV4cCI6MjEwMzY3OTUwM30.N-7hXggITi6yM8VZPtDMWehb1_i1IsR6P5vDMQ6-hJg"
+
+supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 st.set_page_config(
     page_title="Báo Cáo Sự Cố",
@@ -10,40 +15,47 @@ st.set_page_config(
     initial_sidebar_state="collapsed",
 )
 
-DB_NAME = "su_co_v5.db"
-
 
 def get_vn_now():
   vn_tz = timezone(timedelta(hours=7))
   return datetime.now(vn_tz)
 
 
-def init_db():
-  conn = sqlite3.connect(DB_NAME)
-  c = conn.cursor()
-  c.execute("""
-        CREATE TABLE IF NOT EXISTS su_co (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            thiet_bi TEXT,
-            thoi_gian_bao TEXT,
-            ten_su_co TEXT,
-            du_kien_xong TEXT,
-            nguoi_bao_cao TEXT,
-            trang_thai TEXT DEFAULT 'Đang xử lý',
-            thoi_gian_xong TEXT DEFAULT ''
-        )
-    """)
-  conn.commit()
-  conn.close()
+def get_rounded_time(dt):
+  minute = dt.minute
+  if minute < 15:
+    rounded_dt = dt.replace(minute=0, second=0, microsecond=0)
+  elif minute < 45:
+    rounded_dt = dt.replace(minute=30, second=0, microsecond=0)
+  else:
+    rounded_dt = (dt + timedelta(hours=1)).replace(
+        minute=0, second=0, microsecond=0
+    )
+  return rounded_dt.strftime("%d/%m/%Y %H:%M")
 
 
-init_db()
+def load_data():
+  try:
+    res = supabase.table("su_co").select("*").order("id", desc=False).execute()
+    return pd.DataFrame(res.data)
+  except Exception:
+    return pd.DataFrame(
+        columns=[
+            "id",
+            "thiet_bi",
+            "thoi_gian_bao",
+            "ten_su_co",
+            "du_kien_xong",
+            "nguoi_bao_cao",
+            "trang_thai",
+            "thoi_gian_xong",
+        ]
+    )
 
-# CSS TỐI ƯU GIAO DIỆN DI ĐỘNG
+
 st.markdown(
     """
     <style>
-    /* ẨN LOGO VÀ THANH CÔNG CỤ STREAMLIT */
     header, footer, #MainMenu, [data-testid="stToolbar"], 
     .stAppDeployButton, [data-testid="stStatusWidget"],
     div[class*="viewerBadge"], div[class*="styles_viewerBadge"],
@@ -57,7 +69,6 @@ st.markdown(
 
     .stApp { background-color: #f4fbf7; color: #1b4332; }
 
-    /* THU GỌN LỀ MÀN HÌNH DI ĐỘNG */
     .block-container { 
         padding-top: 0.1rem !important; 
         padding-bottom: 0.1rem !important; 
@@ -67,11 +78,7 @@ st.markdown(
 
     h1 { font-size: 0.95rem !important; margin: 0 !important; font-weight: 800 !important; text-align: center; color: #1b4332; }
 
-    /* BẢNG HIỂN THỊ CHUẨN DI ĐỘNG KHÔNG TRÀN */
-    .mobile-table-container {
-        width: 100%;
-        margin-bottom: 8px;
-    }
+    .mobile-table-container { width: 100%; margin-bottom: 8px; }
     .mobile-table {
         width: 100%;
         border-collapse: collapse;
@@ -98,7 +105,6 @@ st.markdown(
         line-height: 1.2;
     }
 
-    /* TỐI ƯU FORM NHẬP */
     div[data-testid="stForm"] { 
         background-color: #ffffff; 
         border: 1.5px solid #52b788; 
@@ -144,36 +150,17 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-
-def get_rounded_time(dt):
-  minute = dt.minute
-  if minute < 15:
-    rounded_dt = dt.replace(minute=0, second=0, microsecond=0)
-  elif minute < 45:
-    rounded_dt = dt.replace(minute=30, second=0, microsecond=0)
-  else:
-    rounded_dt = (dt + timedelta(hours=1)).replace(
-        minute=0, second=0, microsecond=0
-    )
-  return rounded_dt.strftime("%d/%m/%Y %H:%M")
-
-
-time_slots = []
-for hour in range(24):
-  for minute in (0, 30):
-    time_slots.append(f"{hour:02d}:{minute:02d}")
-
+time_slots = [
+    f"{h:02d}:{m:02d}" for h in range(24) for m in (0, 30)
+]
 now_vn = get_vn_now()
-current_hour = now_vn.hour
-current_minute = 30 if now_vn.minute >= 30 else 0
-default_time_str = f"{current_hour:02d}:{current_minute:02d}"
+default_time_str = f"{now_vn.hour:02d}:{'30' if now_vn.minute >= 30 else '00'}"
 default_index = (
     time_slots.index(default_time_str) if default_time_str in time_slots else 0
 )
 
 if "reset_form" not in st.session_state:
   st.session_state.reset_form = False
-
 if "show_success_msg" not in st.session_state:
   st.session_state.show_success_msg = False
 
@@ -184,7 +171,6 @@ if st.session_state.reset_form:
   st.session_state.reset_form = False
 
 st.markdown("<h1>🛠️ BÁO CÁO & THEO DÕI SỰ CỐ</h1>", unsafe_allow_html=True)
-
 tab1, tab2 = st.tabs(["📝 KHAI BÁO MỚI", "📊 QUẢN LÝ SỰ CỐ"])
 
 with tab1:
@@ -213,7 +199,6 @@ with tab1:
       )
 
     nguoi_bao_cao = st.text_input("NGƯỜI BÁO CÁO *", key="input_nguoi_bao_cao")
-
     submit = st.form_submit_button("🚀 GỬI BÁO CÁO SỰ CỐ")
 
     if submit:
@@ -228,44 +213,34 @@ with tab1:
       if missing_fields:
         st.error(f"⚠️ Chưa nhập: {', '.join(missing_fields)}")
       else:
-        current_submit_time = get_vn_now()
-        thoi_gian_bao_str = get_rounded_time(current_submit_time)
-        du_kien_xong_str = f"{ngay_dk.strftime('%d/%m/%Y')} {gio_dk}"
+        df = load_data()
+        new_id = int(df["id"].max() + 1) if not df.empty and "id" in df else 1
 
-        conn = sqlite3.connect(DB_NAME)
-        c = conn.cursor()
-        c.execute(
-            """
-                    INSERT INTO su_co (thiet_bi, thoi_gian_bao, ten_su_co, du_kien_xong, nguoi_bao_cao, trang_thai, thoi_gian_xong)
-                    VALUES (?, ?, ?, ?, ?, 'Đang xử lý', '')
-                """,
-            (
-                thiet_bi.strip(),
-                thoi_gian_bao_str,
-                ten_su_co.strip(),
-                du_kien_xong_str,
-                nguoi_bao_cao.strip(),
-            ),
-        )
-        conn.commit()
-        conn.close()
+        new_row = {
+            "id": int(new_id),
+            "thiet_bi": thiet_bi.strip(),
+            "thoi_gian_bao": get_rounded_time(get_vn_now()),
+            "ten_su_co": ten_su_co.strip(),
+            "du_kien_xong": f"{ngay_dk.strftime('%d/%m/%Y')} {gio_dk}",
+            "nguoi_bao_cao": nguoi_bao_cao.strip(),
+            "trang_thai": "Đang xử lý",
+            "thoi_gian_xong": "",
+        }
+
+        supabase.table("su_co").insert(new_row).execute()
 
         st.session_state.reset_form = True
         st.session_state.show_success_msg = True
         st.rerun()
 
 with tab2:
-  conn = sqlite3.connect(DB_NAME)
-  df = pd.read_sql_query(
-      "SELECT id, thiet_bi, thoi_gian_bao, ten_su_co, du_kien_xong,"
-      " nguoi_bao_cao, trang_thai, thoi_gian_xong FROM su_co ORDER BY id DESC",
-      conn,
-  )
-  conn.close()
+  df = load_data()
 
   if not df.empty:
+    df_sorted = df.sort_values(by="id", ascending=False).reset_index(drop=True)
+
     rows_list = []
-    for idx, row in df.iterrows():
+    for idx, row in df_sorted.iterrows():
       stt = f"{idx + 1}/"
       du_kien_val = str(row["du_kien_xong"])
       if " " in du_kien_val:
@@ -293,21 +268,20 @@ with tab2:
         ' class="mobile-table"><thead><tr><th style="width: 8%;">STT</th><th'
         ' style="width: 18%;">MÁY</th><th style="width: 46%;">SỰ CỐ (TG'
         ' BÁO)</th><th style="width:'
-        f' 28%;">DỰ KIẾN</th></tr></thead><tbody>{all_rows}</tbody></table></div>'
+        f' 28%;">DỰ KIẾN HOÀN THÀNH</th></tr></thead><tbody>{all_rows}</tbody></table></div>'
     )
-
     st.markdown(table_html, unsafe_allow_html=True)
 
     # SAO CHÉP SỰ CỐ
     su_co_list = [
         f"{idx + 1}/ {row['thiet_bi']} - {row['ten_su_co']} [{row['trang_thai']}]"
-        for idx, row in df.iterrows()
+        for idx, row in df_sorted.iterrows()
     ]
     selected_option = st.selectbox("Chọn sự cố copy:", su_co_list, index=0)
 
     if selected_option:
       selected_idx = su_co_list.index(selected_option)
-      selected_row = df.iloc[selected_idx]
+      selected_row = df_sorted.iloc[selected_idx]
 
       nguoi_gui = (
           selected_row["nguoi_bao_cao"]
@@ -331,7 +305,7 @@ with tab2:
       st.code(single_text, language="text")
 
     # XÁC NHẬN HOÀN THÀNH
-    pending_df = df[df["trang_thai"] != "✅ Đã xong"]
+    pending_df = df_sorted[df_sorted["trang_thai"] != "✅ Đã xong"]
     if not pending_df.empty:
       done_list = [
           f"{row['thiet_bi']} - {row['ten_su_co']}"
@@ -344,19 +318,13 @@ with tab2:
       if st.button("✅ XÁC NHẬN HOÀN THÀNH"):
         selected_idx = done_list.index(selected_done)
         target_id = int(pending_df.iloc[selected_idx]["id"])
+        actual_done_time = get_rounded_time(get_vn_now())
 
-        actual_click_time = get_vn_now()
-        actual_done_time = get_rounded_time(actual_click_time)
+        supabase.table("su_co").update({
+            "trang_thai": "✅ Đã xong",
+            "thoi_gian_xong": actual_done_time,
+        }).eq("id", target_id).execute()
 
-        conn = sqlite3.connect(DB_NAME)
-        c = conn.cursor()
-        c.execute(
-            "UPDATE su_co SET trang_thai='✅ Đã xong', thoi_gian_xong=? WHERE"
-            " id=?",
-            (actual_done_time, target_id),
-        )
-        conn.commit()
-        conn.close()
         st.success(f"🎉 Đã xong lúc: {actual_done_time}")
         st.rerun()
 
@@ -364,20 +332,17 @@ with tab2:
     with st.expander("🔑 Admin xóa"):
       admin_pass = st.text_input("Mật khẩu Admin:", type="password")
       del_list = [
-          f"{row['thiet_bi']} - {row['ten_su_co']}" for _, row in df.iterrows()
+          f"{row['thiet_bi']} - {row['ten_su_co']}"
+          for _, row in df_sorted.iterrows()
       ]
       selected_del = st.selectbox("Sự cố xóa:", del_list)
 
       if st.button("❌ XÓA"):
         if admin_pass == "230":
           del_idx = del_list.index(selected_del)
-          del_id = int(df.iloc[del_idx]["id"])
+          target_id = int(df_sorted.iloc[del_idx]["id"])
 
-          conn = sqlite3.connect(DB_NAME)
-          c = conn.cursor()
-          c.execute("DELETE FROM su_co WHERE id=?", (del_id,))
-          conn.commit()
-          conn.close()
+          supabase.table("su_co").delete().eq("id", target_id).execute()
 
           st.success("🗑️ Đã xóa!")
           st.rerun()
