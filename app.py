@@ -46,7 +46,6 @@ st.markdown(
     .stButton button, button[kind="FormSubmitButton"] { background: linear-gradient(90deg, #2d6a4f 0%, #40916c 100%) !important; color: white !important; font-weight: bold !important; border-radius: 8px !important; width: 100%; font-size: 16px !important; min-height: 48px !important; }
     h1, h2, h3 { color: #1b4332 !important; }
     
-    /* Responsive cho điện thoại */
     @media (max-width: 640px) {
         div[data-testid="stForm"] { padding: 10px; }
         .stButton button { font-size: 15px !important; }
@@ -70,7 +69,6 @@ def get_rounded_time(dt):
   return rounded_dt.strftime("%d/%m/%Y %H:%M")
 
 
-# Tạo danh sách 48 khung giờ (mỗi nấc 30 phút)
 time_slots = []
 for hour in range(24):
   for minute in (0, 30):
@@ -84,14 +82,25 @@ default_index = (
     time_slots.index(default_time_str) if default_time_str in time_slots else 0
 )
 
+# Quản lý Session State để xóa form khi gửi thành công
+if "reset_form" not in st.session_state:
+  st.session_state.reset_form = False
+
+if st.session_state.reset_form:
+  st.session_state["input_thiet_bi"] = ""
+  st.session_state["input_ten_su_co"] = ""
+  st.session_state["input_nguoi_bao_cao"] = ""
+  st.session_state.reset_form = False
+
 st.title("🛠️ BÁO CÁO & THEO DÕI SỰ CỐ")
 
 tab1, tab2 = st.tabs(["📝 KHAI BÁO MỚI", "📊 DANH SÁCH QUẢN LÝ"])
 
 with tab1:
   st.subheader("KHAI BÁO SỰ CỐ KỸ THUẬT")
-  with st.form("form_su_co", clear_on_submit=True):
-    thiet_bi = st.text_input("**MÁY / THIẾT BỊ ***")
+  # Tắt clear_on_submit để giữ nguyên dữ liệu đã nhập nếu thiếu
+  with st.form("form_su_co", clear_on_submit=False):
+    thiet_bi = st.text_input("**MÁY / THIẾT BỊ ***", key="input_thiet_bi")
 
     st.write("**THỜI GIAN BÁO ***")
     col1, col2 = st.columns(2)
@@ -104,7 +113,9 @@ with tab1:
           "Giờ báo *", time_slots, index=default_index, key="gio_bao_input"
       )
 
-    ten_su_co = st.text_input("**TÊN SỰ CỐ / BỆNH CỦA MÁY ***")
+    ten_su_co = st.text_input(
+        "**TÊN SỰ CỐ / BỆNH CỦA MÁY ***", key="input_ten_su_co"
+    )
 
     st.write("**THỜI GIAN DỰ KIẾN HOÀN THÀNH ***")
     col3, col4 = st.columns(2)
@@ -117,20 +128,26 @@ with tab1:
           "Giờ dự kiến *", time_slots, index=default_index, key="gio_dk_input"
       )
 
-    nguoi_bao_cao = st.text_input("**NGƯỜI BÁO CÁO ***")
+    nguoi_bao_cao = st.text_input(
+        "**NGƯỜI BÁO CÁO ***", key="input_nguoi_bao_cao"
+    )
 
     submit = st.form_submit_button("🚀 GỬI BÁO CÁO SỰ CỐ")
 
     if submit:
-      # Kiểm tra ràng buộc bắt buộc nhập tất cả các ô
-      if (
-          not thiet_bi.strip()
-          or not ten_su_co.strip()
-          or not nguoi_bao_cao.strip()
-      ):
+      # Kiểm tra chính xác từng ô còn thiếu
+      missing_fields = []
+      if not thiet_bi.strip():
+        missing_fields.append("MÁY / THIẾT BỊ")
+      if not ten_su_co.strip():
+        missing_fields.append("TÊN SỰ CỐ / BỆNH CỦA MÁY")
+      if not nguoi_bao_cao.strip():
+        missing_fields.append("NGƯỜI BÁO CÁO")
+
+      if missing_fields:
+        fields_str = ", ".join(missing_fields)
         st.error(
-            "⚠️ Vui lòng nhập ĐẦY ĐỦ TẤT CẢ CÁC MỤC (Máy, Sự cố, Người báo"
-            " cáo)!"
+            f"⚠️ Vui lòng nhập bổ sung các mục còn thiếu: **{fields_str}**"
         )
       else:
         thoi_gian_bao_str = f"{ngay_bao.strftime('%d/%m/%Y')} {gio_bao}"
@@ -153,7 +170,11 @@ with tab1:
         )
         conn.commit()
         conn.close()
+
+        # Đặt cờ làm sạch form cho lần nhập tiếp theo
+        st.session_state.reset_form = True
         st.success("✅ Đã ghi nhận báo cáo sự cố thành công!")
+        st.rerun()
 
 with tab2:
   st.subheader("DANH SÁCH SỰ CỐ & SAO CHÉP")
