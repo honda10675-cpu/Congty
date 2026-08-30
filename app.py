@@ -39,11 +39,11 @@ def init_db():
 
 init_db()
 
-# CSS CAN THIỆP SÂU - ÉP 1 HÀNG DỌC DI ĐỘNG & ẨN LOGO
+# CSS TỐI ƯU GIAO DIỆN VÀ AN TOÀN TUYỆT ĐỐI
 st.markdown(
     """
     <style>
-    /* 1. ẨN TRIỆT ĐỂ LOGO STREAMLIT & HOSTING BADGE */
+    /* 1. ẨN LOGO VÀ THANH CÔNG CỤ STREAMLIT */
     header, footer, #MainMenu, [data-testid="stToolbar"], 
     .stAppDeployButton, [data-testid="stStatusWidget"],
     div[class*="viewerBadge"], div[class*="styles_viewerBadge"],
@@ -57,7 +57,7 @@ st.markdown(
 
     .stApp { background-color: #f4fbf7; color: #1b4332; }
 
-    /* 2. KHU VỰC LỀ SIÊU GỌN VỪA KHÍT MÀN HÌNH */
+    /* 2. THU GỌN LỀ MÀN HÌNH */
     .block-container { 
         padding-top: 0.1rem !important; 
         padding-bottom: 0.1rem !important; 
@@ -65,38 +65,9 @@ st.markdown(
         padding-right: 0.2rem !important; 
     }
 
-    h1 { font-size: 0.95rem !important; margin: 0 !important; font-weight: 800 !important; text-align: center; }
+    h1 { font-size: 0.95rem !important; margin: 0 !important; font-weight: 800 !important; text-align: center; color: #1b4332; }
 
-    /* 3. ĐỊNH DẠNG BẢNG HTML VỪA VẶN 1 HÀNG NGANG MÀN HÌNH DI ĐỘNG */
-    .custom-table-container {
-        width: 100%;
-        overflow-x: hidden;
-        margin-bottom: 5px;
-    }
-    .custom-table {
-        width: 100%;
-        border-collapse: collapse;
-        font-size: 10px !important;
-        background-color: #ffffff;
-    }
-    .custom-table th {
-        background-color: #2d6a4f;
-        color: #ffffff;
-        padding: 4px 2px;
-        text-align: center;
-        border: 1px solid #52b788;
-        font-size: 10px;
-        white-space: nowrap;
-    }
-    .custom-table td {
-        padding: 4px 2px;
-        border: 1px solid #b7e4c7;
-        text-align: center;
-        word-wrap: break-word;
-        font-size: 10px;
-    }
-
-    /* 4. TỐI ƯU FORM NHẬP */
+    /* 3. TỐI ƯU FORM NHẬP */
     div[data-testid="stForm"] { 
         background-color: #ffffff; 
         border: 1.5px solid #52b788; 
@@ -110,7 +81,7 @@ st.markdown(
         font-weight: bold;
     }
 
-    div[data-testid="stVerticalBlock"] > div { gap: 0.1rem !important; }
+    div[data-testid="stVerticalBlock"] > div { gap: 0.15rem !important; }
 
     .stTextInput input, div[data-baseweb="select"], div[data-baseweb="input"] { 
         background-color: #f8fff9 !important; 
@@ -136,6 +107,11 @@ st.markdown(
         font-size: 11px !important; 
         font-weight: bold !important; 
         padding: 2px 4px !important;
+    }
+    
+    /* Thu nhỏ bảng hiển thị */
+    div[data-testid="stDataFrame"] {
+        font-size: 11px !important;
     }
     </style>
 """,
@@ -269,24 +245,11 @@ with tab2:
   conn.close()
 
   if not df.empty:
-    # TỰ TẠO BẢNG HTML CHUẨN XÓA LỖI INDENT KHÔNG BỊ TRỢT CODE
-    rows_html = ""
-    for _, row in df.iterrows():
-      rows_html += (
-          f"<tr><td><b>{row['thiet_bi']}</b></td><td>{row['thoi_gian_bao']}</td><td"
-          f" style='text-align:"
-          f" left;'>{row['ten_su_co']}</td><td>{row['du_kien_xong']}</td></tr>"
-      )
+    # HIỂN THỊ BẢNG CHUẨN ĐÃ ẨN CỘT INDEX SỐ THỨ TỰ & GỌN MÀN HÌNH
+    df_table = df[["thiet_bi", "thoi_gian_bao", "ten_su_co", "du_kien_xong"]]
+    df_table.columns = ["MÁY", "TG BÁO", "SỰ CỐ", "DỰ KIẾN"]
 
-    table_html = (
-        f'<div class="custom-table-container"><table'
-        " class="custom-table"><thead><tr><th style="width: 15%;">MÁY</th><th"
-        ' style="width: 25%;">TG BÁO</th><th style="width: 35%;">SỰ CỐ</th><th'
-        ' style="width: 25%;">DỰ'
-        f" KIẾN</th></tr></thead><tbody>{rows_html}</tbody></table></div>"
-    )
-
-    st.markdown(table_html, unsafe_allow_html=True)
+    st.dataframe(df_table, use_container_width=True, hide_index=True, height=110)
 
     # SAO CHÉP SỰ CỐ
     su_co_list = [
