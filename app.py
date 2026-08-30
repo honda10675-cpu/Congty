@@ -43,7 +43,7 @@ init_db()
 st.markdown(
     """
     <style>
-    /* 1. AN TRIET DE LOGO STREAMLIT & HOSTING BADGE */
+    /* 1. ẨN TRIỆT ĐỂ LOGO STREAMLIT & HOSTING BADGE */
     header, footer, #MainMenu, [data-testid="stToolbar"], 
     .stAppDeployButton, [data-testid="stStatusWidget"],
     div[class*="viewerBadge"], div[class*="styles_viewerBadge"],
@@ -57,7 +57,7 @@ st.markdown(
 
     .stApp { background-color: #f4fbf7; color: #1b4332; }
 
-    /* 2. KHU VUC LỀ SIÊU GỌN VỪA KHÍT MÀN HÌNH */
+    /* 2. KHU VỰC LỀ SIÊU GỌN VỪA KHÍT MÀN HÌNH */
     .block-container { 
         padding-top: 0.1rem !important; 
         padding-bottom: 0.1rem !important; 
@@ -269,34 +269,23 @@ with tab2:
   conn.close()
 
   if not df.empty:
-    # TỰ TẠO BẢNG HTML SIÊU NHẸ NÉN VỪA 1 HÀNG MÀN HÌNH DI ĐỘNG
-    table_html = """
-        <div class="custom-table-container">
-            <table class="custom-table">
-                <thead>
-                    <tr>
-                        <th style="width: 15%;">MÁY</th>
-                        <th style="width: 25%;">TG BÁO</th>
-                        <th style="width: 35%;">SỰ CỐ</th>
-                        <th style="width: 25%;">DỰ KIẾN</th>
-                    </tr>
-                </thead>
-                <tbody>
-        """
+    # TỰ TẠO BẢNG HTML CHUẨN XÓA LỖI INDENT KHÔNG BỊ TRỢT CODE
+    rows_html = ""
     for _, row in df.iterrows():
-      table_html += f"""
-                <tr>
-                    <td><b>{row['thiet_bi']}</b></td>
-                    <td>{row['thoi_gian_bao']}</td>
-                    <td style="text-align: left;">{row['ten_su_co']}</td>
-                    <td>{row['du_kien_xong']}</td>
-                </tr>
-            """
-    table_html += """
-                </tbody>
-            </table>
-        </div>
-        """
+      rows_html += (
+          f"<tr><td><b>{row['thiet_bi']}</b></td><td>{row['thoi_gian_bao']}</td><td"
+          f" style='text-align:"
+          f" left;'>{row['ten_su_co']}</td><td>{row['du_kien_xong']}</td></tr>"
+      )
+
+    table_html = (
+        f'<div class="custom-table-container"><table'
+        " class="custom-table"><thead><tr><th style="width: 15%;">MÁY</th><th"
+        ' style="width: 25%;">TG BÁO</th><th style="width: 35%;">SỰ CỐ</th><th'
+        ' style="width: 25%;">DỰ'
+        f" KIẾN</th></tr></thead><tbody>{rows_html}</tbody></table></div>"
+    )
+
     st.markdown(table_html, unsafe_allow_html=True)
 
     # SAO CHÉP SỰ CỐ
