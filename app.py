@@ -202,11 +202,14 @@ with tab1:
     col3, col4 = st.columns(2)
     with col3:
       ngay_dk = st.date_input(
-          "Ngày dự kiến *", value=now_vn.date(), key="ngay_dk_input"
+          "Ngày dự kiến hoàn thành *", value=now_vn.date(), key="ngay_dk_input"
       )
     with col4:
       gio_dk = st.selectbox(
-          "Giờ dự kiến *", time_slots, index=default_index, key="gio_dk_input"
+          "Giờ dự kiến hoàn thành *",
+          time_slots,
+          index=default_index,
+          key="gio_dk_input",
       )
 
     nguoi_bao_cao = st.text_input("NGƯỜI BÁO CÁO *", key="input_nguoi_bao_cao")
@@ -261,7 +264,6 @@ with tab2:
   conn.close()
 
   if not df.empty:
-    # HIỂN THỊ BẢNG HTML CHUẨN
     rows_list = []
     for idx, row in df.iterrows():
       stt = f"{idx + 1}/"
@@ -320,7 +322,7 @@ with tab2:
           f"MÁY: {selected_row['thiet_bi']}\n"
           f"THỜI GIAN BÁO: {selected_row['thoi_gian_bao']}\n"
           f"TÊN SỰ CỐ: {selected_row['ten_su_co']}\n"
-          f"THỜI GIAN DỰ KIẾN: {selected_row['du_kien_xong']}\n"
+          f"THỜI GIAN DỰ KIẾN HOÀN THÀNH: {selected_row['du_kien_xong']}\n"
       )
       if selected_row["trang_thai"] == "✅ Đã xong":
         single_text += f"THỜI GIAN HOÀN THÀNH THỰC TẾ: {selected_row['thoi_gian_xong']}\n"
