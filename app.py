@@ -7,6 +7,41 @@ st.set_page_config(
     page_title="Hệ Thống Báo Cáo Sự Cố", page_icon="🛠️", layout="wide"
 )
 
+# Tùy chỉnh CSS giao diện màu xanh công nghiệp
+st.markdown(
+    """
+    <style>
+    .stApp {
+        background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+        color: #f8fafc;
+    }
+    div[data-testid="stForm"] {
+        background-color: #1e293b;
+        border: 1px solid #334155;
+        border-radius: 12px;
+        padding: 20px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+    }
+    .stTextInput input, .stTextArea textarea, div[data-baseweb="select"] {
+        background-color: #0f172a !important;
+        color: #f8fafc !important;
+        border: 1px solid #475569 !important;
+        border-radius: 8px !important;
+    }
+    .stButton button, button[kind="FormSubmitButton"] {
+        background: linear-gradient(90deg, #2563eb 0%, #1d4ed8 100%) !important;
+        color: white !important;
+        border: none !important;
+        border-radius: 8px !important;
+        font-weight: bold !important;
+        padding: 10px 24px !important;
+        width: 100%;
+    }
+    </style>
+""",
+    unsafe_allow_javascript=True,
+)
+
 
 def init_db():
   conn = sqlite3.connect("su_co_web.db")
@@ -34,20 +69,22 @@ st.title("🛠️ Báo Cáo & Theo Dõi Sự Cố")
 tab1, tab2 = st.tabs(["📝 Khai Báo Mới", "📊 Danh Sách Quản Lý"])
 
 with tab1:
-  st.subheader("Báo cáo sự cố máy móc")
+  st.subheader("Khai báo sự cố kỹ thuật")
   with st.form("form_su_co", clear_on_submit=True):
-    ten_su_co = st.text_input("Tên sự cố *")
-    thiet_bi = st.text_input("Tên thiết bị / Máy móc *")
+    ten_su_co = st.text_input("Tên sự cố / Bệnh của máy *")
+    thiet_bi = st.text_input("Tên thiết bị / Máy móc / Dây chuyền *")
     nguoi_bao_cao = st.text_input("Người báo cáo")
     muc_do = st.selectbox(
         "Mức độ ưu tiên", ["Thấp", "Trung bình", "Cao", "Khẩn cấp"], index=1
     )
     trang_thai = st.selectbox(
-        "Trạng thái", ["Mới ghi nhận", "Đang xử lý", "Đã hoàn thành"], index=0
+        "Trạng thái ban đầu",
+        ["Mới ghi nhận", "Đang xử lý", "Đã hoàn thành"],
+        index=0,
     )
-    mo_ta = st.text_area("Mô tả chi tiết")
+    mo_ta = st.text_area("Mô tả chi tiết sự cố")
 
-    submit = st.form_submit_button("🚀 Gửi Báo Cáo")
+    submit = st.form_submit_button("🚀 GỬI BÁO CÁO SỰ CỐ")
 
     if submit:
       if not ten_su_co or not thiet_bi:
@@ -73,10 +110,10 @@ with tab1:
         )
         conn.commit()
         conn.close()
-        st.success("✅ Đã gửi báo cáo thành công!")
+        st.success("✅ Đã ghi nhận báo cáo sự cố thành công!")
 
 with tab2:
-  st.subheader("Danh sách sự cố")
+  st.subheader("Danh sách quản lý sự cố")
   conn = sqlite3.connect("su_co_web.db")
   df = pd.read_sql_query("SELECT * FROM su_co ORDER BY id DESC", conn)
   conn.close()
@@ -85,7 +122,7 @@ with tab2:
     st.dataframe(df, use_container_width=True)
 
     st.divider()
-    st.subheader("Cập nhật trạng thái")
+    st.subheader("Cập nhật trạng thái xử lý")
     col_a, col_b = st.columns(2)
     with col_a:
       selected_id = st.number_input("Nhập ID sự cố:", min_value=1, step=1)
@@ -102,7 +139,9 @@ with tab2:
       )
       conn.commit()
       conn.close()
-      st.success(f"Đã cập nhật ID {selected_id}!")
+      st.success(f"Đã cập nhật trạng thái cho ID {selected_id}!")
       st.rerun()
+  else:
+    st.info("Chưa có báo cáo sự cố nào.")      st.rerun()
   else:
     st.info("Chưa có báo cáo nào.")
