@@ -10,7 +10,6 @@ st.set_page_config(
 DB_NAME = "su_co_v5.db"
 
 
-# Múi giờ Việt Nam (UTC+7)
 def get_vn_now():
   vn_tz = timezone(timedelta(hours=7))
   return datetime.now(vn_tz)
@@ -37,22 +36,27 @@ def init_db():
 
 init_db()
 
-# Giao diện Xanh lá cây - Trắng
+# Giao diện Xanh lá cây - Trắng tối ưu cho Mobile
 st.markdown(
     """
     <style>
     .stApp { background-color: #f4fbf7; color: #1b4332; }
-    div[data-testid="stForm"] { background-color: #ffffff; border: 2px solid #52b788; border-radius: 12px; padding: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
-    .stTextInput input, div[data-baseweb="select"] { background-color: #f8fff9 !important; border: 1px solid #74c69d !important; border-radius: 8px !important; color: #1b4332 !important; }
-    .stButton button, button[kind="FormSubmitButton"] { background: linear-gradient(90deg, #2d6a4f 0%, #40916c 100%) !important; color: white !important; font-weight: bold !important; border-radius: 8px !important; width: 100%; font-size: 16px !important; }
+    div[data-testid="stForm"] { background-color: #ffffff; border: 2px solid #52b788; border-radius: 12px; padding: 16px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+    .stTextInput input, div[data-baseweb="select"] { background-color: #f8fff9 !important; border: 1px solid #74c69d !important; border-radius: 8px !important; color: #1b4332 !important; font-size: 16px !important; }
+    .stButton button, button[kind="FormSubmitButton"] { background: linear-gradient(90deg, #2d6a4f 0%, #40916c 100%) !important; color: white !important; font-weight: bold !important; border-radius: 8px !important; width: 100%; font-size: 16px !important; min-height: 48px !important; }
     h1, h2, h3 { color: #1b4332 !important; }
+    
+    /* Responsive cho điện thoại */
+    @media (max-width: 640px) {
+        div[data-testid="stForm"] { padding: 10px; }
+        .stButton button { font-size: 15px !important; }
+    }
     </style>
 """,
     unsafe_allow_html=True,
 )
 
 
-# Hàm làm tròn thời gian thực tế thành mốc 30 phút theo giờ Việt Nam
 def get_rounded_time(dt):
   minute = dt.minute
   if minute < 15:
@@ -93,33 +97,41 @@ with tab1:
     col1, col2 = st.columns(2)
     with col1:
       ngay_bao = st.date_input(
-          "Ngày báo", value=now_vn.date(), key="ngay_bao_input"
+          "Ngày báo *", value=now_vn.date(), key="ngay_bao_input"
       )
     with col2:
       gio_bao = st.selectbox(
-          "Giờ báo", time_slots, index=default_index, key="gio_bao_input"
+          "Giờ báo *", time_slots, index=default_index, key="gio_bao_input"
       )
 
     ten_su_co = st.text_input("**TÊN SỰ CỐ / BỆNH CỦA MÁY ***")
 
-    st.write("**THỜI GIAN DỰ KIẾN HOÀN THÀNH**")
+    st.write("**THỜI GIAN DỰ KIẾN HOÀN THÀNH ***")
     col3, col4 = st.columns(2)
     with col3:
       ngay_dk = st.date_input(
-          "Ngày dự kiến", value=now_vn.date(), key="ngay_dk_input"
+          "Ngày dự kiến *", value=now_vn.date(), key="ngay_dk_input"
       )
     with col4:
       gio_dk = st.selectbox(
-          "Giờ dự kiến", time_slots, index=default_index, key="gio_dk_input"
+          "Giờ dự kiến *", time_slots, index=default_index, key="gio_dk_input"
       )
 
-    nguoi_bao_cao = st.text_input("**NGƯỜI BÁO CÁO**")
+    nguoi_bao_cao = st.text_input("**NGƯỜI BÁO CÁO ***")
 
     submit = st.form_submit_button("🚀 GỬI BÁO CÁO SỰ CỐ")
 
     if submit:
-      if not thiet_bi.strip() or not ten_su_co.strip():
-        st.error("⚠️ Vui lòng nhập đầy đủ thông tin MÁY và TÊN SỰ CỐ!")
+      # Kiểm tra ràng buộc bắt buộc nhập tất cả các ô
+      if (
+          not thiet_bi.strip()
+          or not ten_su_co.strip()
+          or not nguoi_bao_cao.strip()
+      ):
+        st.error(
+            "⚠️ Vui lòng nhập ĐẦY ĐỦ TẤT CẢ CÁC MỤC (Máy, Sự cố, Người báo"
+            " cáo)!"
+        )
       else:
         thoi_gian_bao_str = f"{ngay_bao.strftime('%d/%m/%Y')} {gio_bao}"
         du_kien_xong_str = f"{ngay_dk.strftime('%d/%m/%Y')} {gio_dk}"
@@ -132,11 +144,11 @@ with tab1:
                     VALUES (?, ?, ?, ?, ?, 'Đang xử lý', '')
                 """,
             (
-                thiet_bi,
+                thiet_bi.strip(),
                 thoi_gian_bao_str,
-                ten_su_co,
+                ten_su_co.strip(),
                 du_kien_xong_str,
-                nguoi_bao_cao,
+                nguoi_bao_cao.strip(),
             ),
         )
         conn.commit()
@@ -191,7 +203,6 @@ with tab2:
           selected_idx = done_list.index(selected_done)
           target_id = int(pending_df.iloc[selected_idx]["id"])
 
-          # Lấy chính xác thời gian bấm nút lúc này theo múi giờ VN
           actual_click_time = get_vn_now()
           actual_done_time = get_rounded_time(actual_click_time)
 
