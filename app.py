@@ -7,8 +7,8 @@ st.set_page_config(
     page_title="Hệ Thống Báo Cáo Sự Cố", page_icon="🛠️", layout="wide"
 )
 
-# Sử dụng DB phiên bản mới để tránh xung đột với DB cũ
-DB_NAME = "su_co_v2.db"
+# Đổi sang DB mới để hoàn toàn sạch dữ liệu cũ
+DB_NAME = "su_co_v3.db"
 
 
 def init_db():
@@ -17,11 +17,11 @@ def init_db():
   c.execute("""
         CREATE TABLE IF NOT EXISTS su_co (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            ten_su_co TEXT,
             thiet_bi TEXT,
-            nguoi_bao_cao TEXT,
-            khung_gio TEXT,
-            ngay_tao TEXT
+            thoi_gian_bao TEXT,
+            ten_su_co TEXT,
+            du_kien_xong TEXT,
+            nguoi_bao_cao TEXT
         )
     """)
   conn.commit()
@@ -30,7 +30,21 @@ def init_db():
 
 init_db()
 
-# Danh sách 48 khung giờ (bước nhảy 30 phút)
+# Giao diện Xanh lá cây - Trắng
+st.markdown(
+    """
+    <style>
+    .stApp { background-color: #f4fbf7; color: #1b4332; }
+    div[data-testid="stForm"] { background-color: #ffffff; border: 2px solid #52b788; border-radius: 12px; padding: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+    .stTextInput input, div[data-baseweb="select"] { background-color: #f8fff9 !important; border: 1px solid #74c69d !important; border-radius: 8px !important; color: #1b4332 !important; }
+    .stButton button, button[kind="FormSubmitButton"] { background: linear-gradient(90deg, #2d6a4f 0%, #40916c 100%) !important; color: white !important; font-weight: bold !important; border-radius: 8px !important; width: 100%; font-size: 16px !important; }
+    h1, h2, h3 { color: #1b4332 !important; }
+    </style>
+""",
+    unsafe_allow_html=True,
+)
+
+# Tạo danh sách 48 khung giờ (mỗi nấc 30 phút)
 time_slots = []
 for hour in range(24):
   for minute in (0, 30):
@@ -45,51 +59,69 @@ default_index = (
     time_slots.index(default_time_str) if default_time_str in time_slots else 0
 )
 
-st.title("🛠️ Báo Cáo & Theo Dõi Sự Cố")
+st.title("🛠️ BÁO CÁO & THEO DÕI SỰ CỐ")
 
-tab1, tab2 = st.tabs(["📝 Khai Báo Mới", "📊 Danh Sách Quản Lý"])
+tab1, tab2 = st.tabs(["📝 KHAI BÁO MỚI", "📊 DANH SÁCH QUẢN LÝ"])
 
 with tab1:
-  st.subheader("Khai báo sự cố kỹ thuật")
+  st.subheader("KHAI BÁO SỰ CỐ KỸ THUẬT")
   with st.form("form_su_co", clear_on_submit=True):
-    ten_su_co = st.text_input("Tên sự cố / Bệnh của máy *")
-    thiet_bi = st.text_input("Tên thiết bị / Máy móc *")
-    nguoi_bao_cao = st.text_input("Người báo cáo")
 
+    # 1. MÁY / THIẾT BỊ
+    thiet_bi = st.text_input("**MÁY / THIẾT BỊ ***")
+
+    # 2. THỜI GIAN BÁO
+    st.write("**THỜI GIAN BÁO ***")
     col1, col2 = st.columns(2)
     with col1:
-      ngay_phat_sinh = st.date_input("Ngày phát sinh", value=now.date())
-    with col2:
-      khung_gio_selected = st.selectbox(
-          "Khung giờ phát sinh (30 phút)",
-          time_slots,
-          index=default_index,
+      ngay_bao = st.date_input(
+          "Ngày báo", value=now.date(), key="ngay_bao_input"
       )
+    with col2:
+      gio_bao = st.selectbox(
+          "Giờ báo", time_slots, index=default_index, key="gio_bao_input"
+      )
+
+    # 3. TÊN SỰ CỐ / BỆNH CỦA MÁY
+    ten_su_co = st.text_input("**TÊN SỰ CỐ / BỆNH CỦA MÁY ***")
+
+    # 4. THỜI GIAN DỰ KIẾN HOÀN THÀNH
+    st.write("**THỜI GIAN DỰ KIẾN HOÀN THÀNH**")
+    col3, col4 = st.columns(2)
+    with col3:
+      ngay_dk = st.date_input(
+          "Ngày dự kiến", value=now.date(), key="ngay_dk_input"
+      )
+    with col4:
+      gio_dk = st.selectbox(
+          "Giờ dự kiến", time_slots, index=default_index, key="gio_dk_input"
+      )
+
+    # 5. NGƯỜI BÁO CÁO
+    nguoi_bao_cao = st.text_input("**NGƯỜI BÁO CÁO**")
 
     submit = st.form_submit_button("🚀 GỬI BÁO CÁO SỰ CỐ")
 
     if submit:
-      if not ten_su_co.strip() or not thiet_bi.strip():
-        st.error("⚠️ Vui lòng điền Tên sự cố và Thiết bị!")
+      if not thiet_bi.strip() or not ten_su_co.strip():
+        st.error("⚠️ Vui lòng nhập đầy đủ thông tin MÁY và TÊN SỰ CỐ!")
       else:
-        ngay_tao_str = now.strftime("%Y-%m-%d %H:%M")
-        khung_gio_full = (
-            f"{ngay_phat_sinh.strftime('%d/%m/%Y')} {khung_gio_selected}"
-        )
+        thoi_gian_bao_str = f"{ngay_bao.strftime('%d/%m/%Y')} {gio_bao}"
+        du_kien_xong_str = f"{ngay_dk.strftime('%d/%m/%Y')} {gio_dk}"
 
         conn = sqlite3.connect(DB_NAME)
         c = conn.cursor()
         c.execute(
             """
-                    INSERT INTO su_co (ten_su_co, thiet_bi, nguoi_bao_cao, khung_gio, ngay_tao)
+                    INSERT INTO su_co (thiet_bi, thoi_gian_bao, ten_su_co, du_kien_xong, nguoi_bao_cao)
                     VALUES (?, ?, ?, ?, ?)
                 """,
             (
-                ten_su_co,
                 thiet_bi,
+                thoi_gian_bao_str,
+                ten_su_co,
+                du_kien_xong_str,
                 nguoi_bao_cao,
-                khung_gio_full,
-                ngay_tao_str,
             ),
         )
         conn.commit()
@@ -97,17 +129,31 @@ with tab1:
         st.success("✅ Đã ghi nhận báo cáo sự cố thành công!")
 
 with tab2:
-  st.subheader("Danh sách quản lý & Sao chép sự cố")
+  st.subheader("DANH SÁCH SỰ CỐ & SAO CHÉP")
   conn = sqlite3.connect(DB_NAME)
-  df = pd.read_sql_query("SELECT * FROM su_co ORDER BY id DESC", conn)
+  df = pd.read_sql_query(
+      "SELECT thiet_bi, thoi_gian_bao, ten_su_co, du_kien_xong, nguoi_bao_cao"
+      " FROM su_co ORDER BY id DESC",
+      conn,
+  )
   conn.close()
 
   if not df.empty:
-    st.dataframe(df, use_container_width=True)
+    # Đổi tên cột hiển thị
+    df_display = df.rename(
+        columns={
+            "thiet_bi": "MÁY",
+            "thoi_gian_bao": "THỜI GIAN BÁO",
+            "ten_su_co": "TÊN SỰ CỐ",
+            "du_kien_xong": "THỜI GIAN DỰ KIẾN HOÀN THÀNH",
+            "nguoi_bao_cao": "NGƯỜI BÁO CÁO",
+        }
+    )
+    st.dataframe(df_display, use_container_width=True)
     st.divider()
 
-    # Copy TOÀN BỘ
-    st.subheader("📋 Sao chép toàn bộ sự cố")
+    # SAO CHÉP TOÀN BỘ
+    st.subheader("📋 SAO CHÉP TOÀN BỘ SỰ CỐ")
     all_text = "📋 DANH SÁCH BÁO CÁO SỰ CỐ:\n-----------------------------------\n"
     for _, row in df.iterrows():
       nguoi_gui = (
@@ -115,26 +161,28 @@ with tab2:
           if (pd.notna(row["nguoi_bao_cao"]) and str(row["nguoi_bao_cao"]).strip())
           else "N/A"
       )
-      gio_lay = row["khung_gio"] if pd.notna(row["khung_gio"]) else ""
-      all_text += (
-          f"🔹 [ID {row['id']}] {row['ten_su_co']} - Máy: {row['thiet_bi']}\n"
-      )
-      all_text += f"   • Thời gian: {gio_lay} | Người báo: {nguoi_gui}\n\n"
+      all_text += f"🔹 MÁY: {row['thiet_bi']}\n"
+      all_text += f"   • Thời gian báo: {row['thoi_gian_bao']}\n"
+      all_text += f"   • Sự cố: {row['ten_su_co']}\n"
+      all_text += f"   • Dự kiến hoàn thành: {row['du_kien_xong']}\n"
+      all_text += f"   • Người báo cáo: {nguoi_gui}\n\n"
 
     st.code(all_text, language="text")
     st.divider()
 
-    # Copy RIÊNG
-    st.subheader("🔍 Sao chép riêng từng sự cố")
+    # SAO CHÉP RIÊNG TỪNG SỰ CỐ
+    st.subheader("🔍 SAO CHÉP RIÊNG TỪNG SỰ CỐ")
     su_co_list = [
-        f"ID {row['id']} - {row['ten_su_co']} ({row['thiet_bi']})"
+        f"Máy: {row['thiet_bi']} - {row['ten_su_co']} ({row['thoi_gian_bao']})"
         for _, row in df.iterrows()
     ]
-    selected_option = st.selectbox("Chọn sự cố cần lấy thông tin:", su_co_list)
+    selected_option = st.selectbox(
+        "Chọn sự cố cần sao chép:", su_co_list, index=0
+    )
 
     if selected_option:
-      selected_id = int(selected_option.split(" - ")[0].replace("ID ", ""))
-      selected_row = df[df["id"] == selected_id].iloc[0]
+      selected_idx = su_co_list.index(selected_option)
+      selected_row = df.iloc[selected_idx]
 
       nguoi_gui = (
           selected_row["nguoi_bao_cao"]
@@ -144,18 +192,14 @@ with tab2:
           )
           else "N/A"
       )
-      gio_lay = (
-          selected_row["khung_gio"]
-          if pd.notna(selected_row["khung_gio"])
-          else ""
-      )
 
       single_text = (
-          f"🛠️ BÁO CÁO SỰ CỐ [ID {selected_row['id']}]\n"
-          f"• Tên sự cố: {selected_row['ten_su_co']}\n"
-          f"• Thiết bị: {selected_row['thiet_bi']}\n"
-          f"• Thời gian phát sinh: {gio_lay}\n"
-          f"• Người báo cáo: {nguoi_gui}"
+          f"🛠️ BÁO CÁO SỰ CỐ\n"
+          f"• MÁY: {selected_row['thiet_bi']}\n"
+          f"• THỜI GIAN BÁO: {selected_row['thoi_gian_bao']}\n"
+          f"• TÊN SỰ CỐ: {selected_row['ten_su_co']}\n"
+          f"• DỰ KIẾN HOÀN THÀNH: {selected_row['du_kien_xong']}\n"
+          f"• NGƯỜI BÁO CÁO: {nguoi_gui}"
       )
 
       st.code(single_text, language="text")
