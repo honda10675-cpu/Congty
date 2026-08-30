@@ -1,5 +1,5 @@
-from datetime import datetime, timedelta, timezone
 import sqlite3
+from datetime import datetime, timedelta, timezone
 import pandas as pd
 import streamlit as st
 
@@ -198,7 +198,6 @@ with tab1:
       if missing_fields:
         st.error(f"⚠️ Chưa nhập: {', '.join(missing_fields)}")
       else:
-        # TỰ ĐỘNG LẤY THỜI GIAN THỰC KHI BẤM NÚT GỬI
         current_submit_time = get_vn_now()
         thoi_gian_bao_str = get_rounded_time(current_submit_time)
         du_kien_xong_str = f"{ngay_dk.strftime('%d/%m/%Y')} {gio_dk}"
@@ -235,16 +234,20 @@ with tab2:
   conn.close()
 
   if not df.empty:
-    # GỘP THỜI GIAN BÁO VÀ SỰ CỐ CHUNG MỘT Ô
     df_display = df.copy()
     df_display["SỰ CỐ (TG BÁO)"] = (
         df_display["ten_su_co"] + " (" + df_display["thoi_gian_bao"] + ")"
     )
 
-    df_table = df_display[["thiet_bi", "SỰ CỐ (TG BÁO)", "du_kien_xong"]]
+    # NGẮT DÒNG NGÀY VÀ GIỜ TRONG CỘT DỰ KIẾN ĐỂ KHÔNG TRÀN MÀN HÌNH
+    df_display["DU_KIEN_FORMAT"] = df_display["du_kien_xong"].apply(
+        lambda x: x.replace(" ", "\n") if isinstance(x, str) and " " in x else x
+    )
+
+    df_table = df_display[["thiet_bi", "SỰ CỐ (TG BÁO)", "DU_KIEN_FORMAT"]]
     df_table.columns = ["MÁY", "SỰ CỐ (TG BÁO)", "DỰ KIẾN"]
 
-    st.dataframe(df_table, use_container_width=True, hide_index=True, height=120)
+    st.dataframe(df_table, use_container_width=True, hide_index=True, height=130)
 
     # SAO CHÉP SỰ CỐ
     su_co_list = [
@@ -266,9 +269,9 @@ with tab2:
           else "N/A"
       )
 
-      # BỎ ICON Ở TIÊU ĐỀ BÁO CÁO SỰ CỐ
+      # BỎ HOÀN TOÀN TRẠNG THÁI [ĐANG XỬ LÝ] / [ĐÃ XONG] Ở TIÊU ĐỀ
       single_text = (
-          f"BÁO CÁO SỰ CỐ [{selected_row['trang_thai']}]\n"
+          f"BÁO CÁO SỰ CỐ\n"
           f"MÁY: {selected_row['thiet_bi']}\n"
           f"THỜI GIAN BÁO: {selected_row['thoi_gian_bao']}\n"
           f"TÊN SỰ CỐ: {selected_row['ten_su_co']}\n"
