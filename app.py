@@ -4,7 +4,10 @@ import pandas as pd
 import streamlit as st
 
 st.set_page_config(
-    page_title="Hệ Thống Báo Cáo Sự Cố", page_icon="🛠️", layout="centered"
+    page_title="Báo Cáo Sự Cố",
+    page_icon="🛠️",
+    layout="centered",
+    initial_sidebar_state="collapsed",
 )
 
 DB_NAME = "su_co_v5.db"
@@ -36,30 +39,82 @@ def init_db():
 
 init_db()
 
-# Tối ưu CSS chuẩn tỷ lệ màn hình dọc 9:16 trên điện thoại
+# CSS Siêu Thu Gọn & Xóa Logo/Header Streamlit
 st.markdown(
     """
     <style>
+    /* Ẩn Header, Footer, Logo Streamlit, Toolbar, Nút Fork */
+    header, footer, #MainMenu, [data-testid="stToolbar"], .stAppDeployButton, [data-testid="stStatusWidget"] {
+        display: none !important;
+        visibility: hidden !important;
+    }
+    
     .stApp { background-color: #f4fbf7; color: #1b4332; }
     
-    /* Thu gọn khoảng cách viền màn hình */
-    .block-container { padding-top: 1rem !important; padding-bottom: 1rem !important; padding-left: 0.8rem !important; padding-right: 0.8rem !important; }
+    /* Thu gọn lề tối đa cho vừa 1 màn hình */
+    .block-container { 
+        padding-top: 0.5rem !important; 
+        padding-bottom: 0.5rem !important; 
+        padding-left: 0.5rem !important; 
+        padding-right: 0.5rem !important; 
+    }
     
-    /* Chữ tiêu đề vừa vặn màn hình điện thoại */
-    h1 { font-size: 1.5rem !important; margin-bottom: 0.5rem !important; font-weight: 800 !important; text-align: center; }
-    h2, h3, h4 { font-size: 1.2rem !important; margin-bottom: 0.4rem !important; }
+    /* Thu nhỏ tiêu đề */
+    h1 { font-size: 1.1rem !important; margin: 0 !important; font-weight: 800 !important; text-align: center; color: #1b4332; }
+    h2, h3, h4 { font-size: 0.95rem !important; margin: 2px 0 !important; }
     
-    /* Khung Form gọn gàng */
-    div[data-testid="stForm"] { background-color: #ffffff; border: 1.5px solid #52b788; border-radius: 10px; padding: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+    /* Khung Form cực kỳ siêu gọn */
+    div[data-testid="stForm"] { 
+        background-color: #ffffff; 
+        border: 1.5px solid #52b788; 
+        border-radius: 8px; 
+        padding: 6px 10px !important; 
+    }
     
-    /* Ô nhập liệu chuẩn kích thước vân tay bấm trên Mobile */
-    .stTextInput input, div[data-baseweb="select"] { background-color: #f8fff9 !important; border: 1px solid #74c69d !important; border-radius: 6px !important; color: #1b4332 !important; font-size: 15px !important; height: 42px !important; }
+    /* Giảm kích thước nhãn và khoảng cách ô nhập */
+    .stTextInput label, .stSelectbox label, .stDateInput label { 
+        font-size: 12px !important; 
+        margin-bottom: 0px !important; 
+        padding-bottom: 0px !important;
+        font-weight: bold;
+    }
     
-    /* Nút bấm lớn vừa tay bấm */
-    .stButton button, button[kind="FormSubmitButton"] { background: linear-gradient(90deg, #2d6a4f 0%, #40916c 100%) !important; color: white !important; font-weight: bold !important; border-radius: 8px !important; width: 100%; font-size: 16px !important; min-height: 44px !important; margin-top: 5px !important; }
+    div[data-testid="stVerticalBlock"] > div {
+        gap: 0.3rem !important;
+    }
     
-    /* Tab chuyển đổi thiết kế rõ ràng */
-    button[data-baseweb="tab"] { font-size: 15px !important; font-weight: bold !important; }
+    /* Chiều cao ô nhập liệu chuẩn siêu gọn */
+    .stTextInput input, div[data-baseweb="select"], div[data-baseweb="input"] { 
+        background-color: #f8fff9 !important; 
+        border: 1px solid #74c69d !important; 
+        border-radius: 5px !important; 
+        color: #1b4332 !important; 
+        font-size: 13px !important; 
+        height: 34px !important; 
+        min-height: 34px !important;
+    }
+    
+    /* Nút bấm nổi bật nhưng gọn */
+    .stButton button, button[kind="FormSubmitButton"] { 
+        background: linear-gradient(90deg, #2d6a4f 0%, #40916c 100%) !important; 
+        color: white !important; 
+        font-weight: bold !important; 
+        border-radius: 6px !important; 
+        width: 100%; 
+        font-size: 14px !important; 
+        height: 38px !important; 
+        min-height: 38px !important;
+        margin-top: 4px !important; 
+    }
+    
+    /* Tab bar gọn nhẹ */
+    button[data-baseweb="tab"] { 
+        font-size: 13px !important; 
+        font-weight: bold !important; 
+        padding: 4px 8px !important;
+    }
+    
+    hr { margin: 0.4rem 0 !important; }
     </style>
 """,
     unsafe_allow_html=True,
@@ -104,23 +159,19 @@ if st.session_state.reset_form:
   st.session_state["input_nguoi_bao_cao"] = ""
   st.session_state.reset_form = False
 
-st.title("🛠️ BÁO CÁO & THEO DÕI SỰ CỐ")
+st.markdown("<h1>🛠️ BÁO CÁO & THEO DÕI SỰ CỐ</h1>", unsafe_allow_html=True)
 
-# GIỮ NGUYÊN TAB NHƯ CŨ GIÚP TRẢI NGHIỆM TRÊN DI ĐỘNG KHÔNG BỊ KÉO DÀI
-tab1, tab2 = st.tabs(["📝 KHAI BÁO MỚI", "📊 DANH SÁCH QUẢN LÝ"])
+tab1, tab2 = st.tabs(["📝 KHAI BÁO MỚI", "📊 QUẢN LÝ SỰ CỐ"])
 
 with tab1:
-  st.subheader("KHAI BÁO SỰ CỐ KỸ THUẬT")
-
   if st.session_state.show_success_msg:
-    st.success("🎉 GỬI BÁO CÁO SỰ CỐ THÀNH CÔNG!")
+    st.success("🎉 GỬI BÁO CÁO THÀNH CÔNG!")
     st.balloons()
     st.session_state.show_success_msg = False
 
   with st.form("form_su_co", clear_on_submit=False):
-    thiet_bi = st.text_input("**MÁY / THIẾT BỊ ***", key="input_thiet_bi")
+    thiet_bi = st.text_input("MÁY / THIẾT BỊ *", key="input_thiet_bi")
 
-    st.write("**THỜI GIAN BÁO ***")
     col1, col2 = st.columns(2)
     with col1:
       ngay_bao = st.date_input(
@@ -132,10 +183,9 @@ with tab1:
       )
 
     ten_su_co = st.text_input(
-        "**TÊN SỰ CỐ / BỆNH CỦA MÁY ***", key="input_ten_su_co"
+        "TÊN SỰ CỐ / BỆNH CỦA MÁY *", key="input_ten_su_co"
     )
 
-    st.write("**THỜI GIAN DỰ KIẾN HOÀN THÀNH ***")
     col3, col4 = st.columns(2)
     with col3:
       ngay_dk = st.date_input(
@@ -146,24 +196,21 @@ with tab1:
           "Giờ dự kiến *", time_slots, index=default_index, key="gio_dk_input"
       )
 
-    nguoi_bao_cao = st.text_input(
-        "**NGƯỜI BÁO CÁO ***", key="input_nguoi_bao_cao"
-    )
+    nguoi_bao_cao = st.text_input("NGƯỜI BÁO CÁO *", key="input_nguoi_bao_cao")
 
     submit = st.form_submit_button("🚀 GỬI BÁO CÁO SỰ CỐ")
 
     if submit:
       missing_fields = []
       if not thiet_bi.strip():
-        missing_fields.append("MÁY / THIẾT BỊ")
+        missing_fields.append("MÁY")
       if not ten_su_co.strip():
-        missing_fields.append("TÊN SỰ CỐ")
+        missing_fields.append("SỰ CỐ")
       if not nguoi_bao_cao.strip():
         missing_fields.append("NGƯỜI BÁO CÁO")
 
       if missing_fields:
-        fields_str = ", ".join(missing_fields)
-        st.error(f"⚠️ Chưa nhập: **{fields_str}**")
+        st.error(f"⚠️ Chưa nhập: {', '.join(missing_fields)}")
       else:
         thoi_gian_bao_str = f"{ngay_bao.strftime('%d/%m/%Y')} {gio_bao}"
         du_kien_xong_str = f"{ngay_dk.strftime('%d/%m/%Y')} {gio_dk}"
@@ -191,7 +238,6 @@ with tab1:
         st.rerun()
 
 with tab2:
-  st.subheader("DANH SÁCH & SAO CHÉP")
   conn = sqlite3.connect(DB_NAME)
   df = pd.read_sql_query(
       "SELECT id, thiet_bi, thoi_gian_bao, ten_su_co, du_kien_xong,"
@@ -204,29 +250,25 @@ with tab2:
     df_display = df.drop(columns=["id"]).rename(
         columns={
             "thiet_bi": "MÁY",
-            "thoi_gian_bao": "THỜI GIAN BÁO",
-            "ten_su_co": "TÊN SỰ CỐ",
-            "du_kien_xong": "THỜI GIAN DỰ KIẾN",
-            "nguoi_bao_cao": "NGƯỜI BÁO CÁO",
+            "thoi_gian_bao": "TG BÁO",
+            "ten_su_co": "SỰ CỐ",
+            "du_kien_xong": "TG DỰ KIẾN",
+            "nguoi_bao_cao": "NGƯỜI BÁO",
             "trang_thai": "TRẠNG THÁI",
-            "thoi_gian_xong": "HOÀN THÀNH THỰC TẾ",
+            "thoi_gian_xong": "TG XONG",
         }
     )
-    st.dataframe(df_display, use_container_width=True)
+    st.dataframe(df_display, use_container_width=True, height=130)
 
-    st.divider()
-
-    # CẬP NHẬT HOÀN THÀNH SỬA CHỮA
-    st.subheader("✅ CẬP NHẬT HOÀN THÀNH")
+    # CẬP NHẬT HOÀN THÀNH
     pending_df = df[df["trang_thai"] != "✅ Đã xong"]
-
     if not pending_df.empty:
       done_list = [
-          f"Máy: {row['thiet_bi']} - {row['ten_su_co']}"
+          f"{row['thiet_bi']} - {row['ten_su_co']}"
           for _, row in pending_df.iterrows()
       ]
       selected_done = st.selectbox(
-          "Chọn sự cố đã sửa xong:", done_list, key="done_select"
+          "Sự cố đã sửa xong:", done_list, key="done_select"
       )
 
       if st.button("✅ BẤM XÁC NHẬN HOÀN THÀNH"):
@@ -245,22 +287,15 @@ with tab2:
         )
         conn.commit()
         conn.close()
-        st.success(f"🎉 Đã xác nhận xong lúc: {actual_done_time}")
+        st.success(f"🎉 Hoàn thành lúc: {actual_done_time}")
         st.rerun()
-    else:
-      st.info("Tất cả sự cố đã được hoàn thành!")
 
-    st.divider()
-
-    # SAO CHÉP RIÊNG TỪNG SỰ CỐ (XUỐNG DÒNG RÕ RÀNG)
-    st.subheader("🔍 SAO CHÉP TỪNG SỰ CỐ")
+    # SAO CHÉP TỪNG SỰ CỐ
     su_co_list = [
-        f"Máy: {row['thiet_bi']} - {row['ten_su_co']} [{row['trang_thai']}]"
+        f"{row['thiet_bi']} - {row['ten_su_co']} [{row['trang_thai']}]"
         for _, row in df.iterrows()
     ]
-    selected_option = st.selectbox(
-        "Chọn sự cố để copy:", su_co_list, index=0
-    )
+    selected_option = st.selectbox("Chọn sự cố copy:", su_co_list, index=0)
 
     if selected_option:
       selected_idx = su_co_list.index(selected_option)
@@ -283,49 +318,20 @@ with tab2:
           f"THỜI GIAN DỰ KIẾN: {selected_row['du_kien_xong']}\n"
       )
       if selected_row["trang_thai"] == "✅ Đã xong":
-        single_text += (
-            f"THỜI GIAN HOÀN THÀNH THỰC TẾ: {selected_row['thoi_gian_xong']}\n"
-        )
+        single_text += f"THỜI GIAN HOÀN THÀNH THỰC TẾ: {selected_row['thoi_gian_xong']}\n"
       single_text += f"NGƯỜI BÁO CÁO: {nguoi_gui}"
 
       st.code(single_text, language="text")
 
-    st.divider()
-
-    # SAO CHÉP TOÀN BỘ SỰ CỐ
-    st.subheader("📋 SAO CHÉP TOÀN BỘ SỰ CỐ")
-    all_text = "📋 DANH SÁCH BÁO CÁO SỰ CỐ:\n-----------------------------------\n"
-    for _, row in df.iterrows():
-      nguoi_gui = (
-          row["nguoi_bao_cao"]
-          if (pd.notna(row["nguoi_bao_cao"]) and str(row["nguoi_bao_cao"]).strip())
-          else "N/A"
-      )
-      all_text += (
-          f"🔹 MÁY: {row['thiet_bi']} [{row['trang_thai']}]\n"
-          f"THỜI GIAN BÁO: {row['thoi_gian_bao']}\n"
-          f"TÊN SỰ CỐ: {row['ten_su_co']}\n"
-          f"THỜI GIAN DỰ KIẾN: {row['du_kien_xong']}\n"
-      )
-      if row["trang_thai"] == "✅ Đã xong":
-        all_text += f"THỜI GIAN HOÀN THÀNH THỰC TẾ: {row['thoi_gian_xong']}\n"
-      all_text += f"NGƯỜI BÁO CÁO: {nguoi_gui}\n\n"
-
-    st.code(all_text, language="text")
-
-    st.divider()
-
-    # ADMIN XÓA SỰ CỐ
-    st.subheader("🔒 XÓA SỰ CỐ (ADMIN)")
-    with st.expander("Mở vùng Admin để xóa"):
+    # ADMIN XÓA
+    with st.expander("🔑 Admin xóa sự cố"):
       admin_pass = st.text_input("Mật khẩu Admin:", type="password")
       del_list = [
-          f"Máy: {row['thiet_bi']} - {row['ten_su_co']}"
-          for _, row in df.iterrows()
+          f"{row['thiet_bi']} - {row['ten_su_co']}" for _, row in df.iterrows()
       ]
-      selected_del = st.selectbox("Chọn sự cố xóa:", del_list)
+      selected_del = st.selectbox("Sự cố xóa:", del_list)
 
-      if st.button("❌ XÓA SỰ CỐ NÀY"):
+      if st.button("❌ XÓA"):
         if admin_pass == "230":
           del_idx = del_list.index(selected_del)
           del_id = int(df.iloc[del_idx]["id"])
@@ -340,6 +346,5 @@ with tab2:
           st.rerun()
         else:
           st.error("🔑 Sai mật khẩu!")
-
   else:
     st.info("Chưa có báo cáo sự cố nào.")
