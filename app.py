@@ -82,9 +82,12 @@ default_index = (
     time_slots.index(default_time_str) if default_time_str in time_slots else 0
 )
 
-# Quản lý Session State để xóa form khi gửi thành công
+# Quản lý trạng thái reset và thông báo gửi thành công
 if "reset_form" not in st.session_state:
   st.session_state.reset_form = False
+
+if "show_success_msg" not in st.session_state:
+  st.session_state.show_success_msg = False
 
 if st.session_state.reset_form:
   st.session_state["input_thiet_bi"] = ""
@@ -98,7 +101,13 @@ tab1, tab2 = st.tabs(["📝 KHAI BÁO MỚI", "📊 DANH SÁCH QUẢN LÝ"])
 
 with tab1:
   st.subheader("KHAI BÁO SỰ CỐ KỸ THUẬT")
-  # Tắt clear_on_submit để giữ nguyên dữ liệu đã nhập nếu thiếu
+
+  # Hiển thị thông báo thành công nếu vừa gửi xong
+  if st.session_state.show_success_msg:
+    st.success("🎉 ĐÃ GỬI BÁO CÁO SỰ CỐ THÀNH CÔNG VÀO HỆ THỐNG!")
+    st.balloons()
+    st.session_state.show_success_msg = False
+
   with st.form("form_su_co", clear_on_submit=False):
     thiet_bi = st.text_input("**MÁY / THIẾT BỊ ***", key="input_thiet_bi")
 
@@ -135,7 +144,6 @@ with tab1:
     submit = st.form_submit_button("🚀 GỬI BÁO CÁO SỰ CỐ")
 
     if submit:
-      # Kiểm tra chính xác từng ô còn thiếu
       missing_fields = []
       if not thiet_bi.strip():
         missing_fields.append("MÁY / THIẾT BỊ")
@@ -171,9 +179,8 @@ with tab1:
         conn.commit()
         conn.close()
 
-        # Đặt cờ làm sạch form cho lần nhập tiếp theo
         st.session_state.reset_form = True
-        st.success("✅ Đã ghi nhận báo cáo sự cố thành công!")
+        st.session_state.show_success_msg = True
         st.rerun()
 
 with tab2:
