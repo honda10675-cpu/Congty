@@ -39,11 +39,11 @@ def init_db():
 
 init_db()
 
-# CSS TỐI ƯU GIAO DIỆN
+# CSS TỐI ƯU GIAO DIỆN DI ĐỘNG
 st.markdown(
     """
     <style>
-    /* 1. ẨN LOGO VÀ THANH CÔNG CỤ STREAMLIT */
+    /* ẨN LOGO VÀ THANH CÔNG CỤ STREAMLIT */
     header, footer, #MainMenu, [data-testid="stToolbar"], 
     .stAppDeployButton, [data-testid="stStatusWidget"],
     div[class*="viewerBadge"], div[class*="styles_viewerBadge"],
@@ -57,7 +57,7 @@ st.markdown(
 
     .stApp { background-color: #f4fbf7; color: #1b4332; }
 
-    /* 2. THU GỌN LỀ MÀN HÌNH */
+    /* THU GỌN LỀ MÀN HÌNH DI ĐỘNG */
     .block-container { 
         padding-top: 0.1rem !important; 
         padding-bottom: 0.1rem !important; 
@@ -67,7 +67,38 @@ st.markdown(
 
     h1 { font-size: 0.95rem !important; margin: 0 !important; font-weight: 800 !important; text-align: center; color: #1b4332; }
 
-    /* 3. TỐI ƯU FORM NHẬP */
+    /* BẢNG HIỂN THỊ CHUẨN DI ĐỘNG KHÔNG TRÀN */
+    .mobile-table-container {
+        width: 100%;
+        margin-bottom: 8px;
+    }
+    .mobile-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 11px !important;
+        background-color: #ffffff;
+        table-layout: fixed;
+    }
+    .mobile-table th {
+        background-color: #2d6a4f;
+        color: #ffffff;
+        padding: 5px 2px;
+        text-align: center;
+        border: 1px solid #52b788;
+        font-size: 11px;
+        font-weight: bold;
+    }
+    .mobile-table td {
+        padding: 5px 3px;
+        border: 1px solid #b7e4c7;
+        text-align: center;
+        word-wrap: break-word;
+        font-size: 11px;
+        vertical-align: middle;
+        line-height: 1.2;
+    }
+
+    /* TỐI ƯU FORM NHẬP */
     div[data-testid="stForm"] { 
         background-color: #ffffff; 
         border: 1.5px solid #52b788; 
@@ -107,10 +138,6 @@ st.markdown(
         font-size: 11px !important; 
         font-weight: bold !important; 
         padding: 2px 4px !important;
-    }
-    
-    div[data-testid="stDataFrame"] {
-        font-size: 11px !important;
     }
     </style>
 """,
@@ -234,25 +261,52 @@ with tab2:
   conn.close()
 
   if not df.empty:
-    df_display = df.copy()
-    df_display["SỰ CỐ (TG BÁO)"] = (
-        df_display["ten_su_co"] + " (" + df_display["thoi_gian_bao"] + ")"
-    )
+    # TẠO BẢNG HTML CÓ SỐ THỨ TỰ 1/, 2/ VÀ XUỐNG DÒNG RÕ RÀNG Ở CỘT DỰ KIẾN
+    rows_html = ""
+    for idx, row in df.iterrows():
+      stt = f"{idx + 1}/"
 
-    # NGẮT DÒNG NGÀY VÀ GIỜ TRONG CỘT DỰ KIẾN ĐỂ KHÔNG TRÀN MÀN HÌNH
-    df_display["DU_KIEN_FORMAT"] = df_display["du_kien_xong"].apply(
-        lambda x: x.replace(" ", "\n") if isinstance(x, str) and " " in x else x
-    )
+      # Tách ngày và giờ dự kiến để hiển thị 2 dòng gọn gàng
+      du_kien_val = str(row["du_kien_xong"])
+      if " " in du_kien_val:
+        parts = du_kien_val.split(" ")
+        du_kien_display = f"{parts[0]}<br><b style='color:#2d6a4f;'>{parts[1]}</b>"
+      else:
+        du_kien_display = du_kien_val
 
-    df_table = df_display[["thiet_bi", "SỰ CỐ (TG BÁO)", "DU_KIEN_FORMAT"]]
-    df_table.columns = ["MÁY", "SỰ CỐ (TG BÁO)", "DỰ KIẾN"]
+      rows_html += f"""
+            <tr>
+                <td style="width: 8%; font-weight: bold; color: #2d6a4f;">{stt}</td>
+                <td style="width: 18%; font-weight: bold;">{row['thiet_bi']}</td>
+                <td style="width: 46%; text-align: left;">{row['ten_su_co']} <span style="color:#666; font-size:10px;">({row['thoi_gian_bao']})</span></td>
+                <td style="width: 28%;">{du_kien_display}</td>
+            </tr>
+            """
 
-    st.dataframe(df_table, use_container_width=True, hide_index=True, height=130)
+    table_html = f"""
+        <div class="mobile-table-container">
+            <table class="mobile-table">
+                <thead>
+                    <tr>
+                        <th style="width: 8%;">STT</th>
+                        <th style="width: 18%;">MÁY</th>
+                        <th style="width: 46%;">SỰ CỐ (TG BÁO)</th>
+                        <th style="width: 28%;">DỰ KIẾN</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {rows_html}
+                </tbody>
+            </table>
+        </div>
+        """
+
+    st.markdown(table_html, unsafe_allow_html=True)
 
     # SAO CHÉP SỰ CỐ
     su_co_list = [
-        f"{row['thiet_bi']} - {row['ten_su_co']} [{row['trang_thai']}]"
-        for _, row in df.iterrows()
+        f"{idx + 1}/ {row['thiet_bi']} - {row['ten_su_co']} [{row['trang_thai']}]"
+        for idx, row in df.iterrows()
     ]
     selected_option = st.selectbox("Chọn sự cố copy:", su_co_list, index=0)
 
@@ -269,9 +323,8 @@ with tab2:
           else "N/A"
       )
 
-      # BỎ HOÀN TOÀN TRẠNG THÁI [ĐANG XỬ LÝ] / [ĐÃ XONG] Ở TIÊU ĐỀ
+      # BỎ HOÀN TOÀN DÒNG CHỮ "BÁO CÁO SỰ CỐ"
       single_text = (
-          f"BÁO CÁO SỰ CỐ\n"
           f"MÁY: {selected_row['thiet_bi']}\n"
           f"THỜI GIAN BÁO: {selected_row['thoi_gian_bao']}\n"
           f"TÊN SỰ CỐ: {selected_row['ten_su_co']}\n"
