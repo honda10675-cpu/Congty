@@ -39,7 +39,7 @@ def init_db():
 
 init_db()
 
-# CSS TỐI ƯU GIAO DIỆN VÀ AN TOÀN TUYỆT ĐỐI
+# CSS TỐI ƯU GIAO DIỆN
 st.markdown(
     """
     <style>
@@ -109,7 +109,6 @@ st.markdown(
         padding: 2px 4px !important;
     }
     
-    /* Thu nhỏ bảng hiển thị */
     div[data-testid="stDataFrame"] {
         font-size: 11px !important;
     }
@@ -169,17 +168,6 @@ with tab1:
 
   with st.form("form_su_co", clear_on_submit=False):
     thiet_bi = st.text_input("MÁY / THIẾT BỊ *", key="input_thiet_bi")
-
-    col1, col2 = st.columns(2)
-    with col1:
-      ngay_bao = st.date_input(
-          "Ngày báo *", value=now_vn.date(), key="ngay_bao_input"
-      )
-    with col2:
-      gio_bao = st.selectbox(
-          "Giờ báo *", time_slots, index=default_index, key="gio_bao_input"
-      )
-
     ten_su_co = st.text_input(
         "TÊN SỰ CỐ / BỆNH CỦA MÁY *", key="input_ten_su_co"
     )
@@ -210,7 +198,9 @@ with tab1:
       if missing_fields:
         st.error(f"⚠️ Chưa nhập: {', '.join(missing_fields)}")
       else:
-        thoi_gian_bao_str = f"{ngay_bao.strftime('%d/%m/%Y')} {gio_bao}"
+        # TỰ ĐỘNG LẤY THỜI GIAN THỰC KHI BẤM NÚT GỬI
+        current_submit_time = get_vn_now()
+        thoi_gian_bao_str = get_rounded_time(current_submit_time)
         du_kien_xong_str = f"{ngay_dk.strftime('%d/%m/%Y')} {gio_dk}"
 
         conn = sqlite3.connect(DB_NAME)
@@ -245,11 +235,16 @@ with tab2:
   conn.close()
 
   if not df.empty:
-    # HIỂN THỊ BẢNG CHUẨN ĐÃ ẨN CỘT INDEX SỐ THỨ TỰ & GỌN MÀN HÌNH
-    df_table = df[["thiet_bi", "thoi_gian_bao", "ten_su_co", "du_kien_xong"]]
-    df_table.columns = ["MÁY", "TG BÁO", "SỰ CỐ", "DỰ KIẾN"]
+    # GỘP THỜI GIAN BÁO VÀ SỰ CỐ CHUNG MỘT Ô
+    df_display = df.copy()
+    df_display["SỰ CỐ (TG BÁO)"] = (
+        df_display["ten_su_co"] + " (" + df_display["thoi_gian_bao"] + ")"
+    )
 
-    st.dataframe(df_table, use_container_width=True, hide_index=True, height=110)
+    df_table = df_display[["thiet_bi", "SỰ CỐ (TG BÁO)", "du_kien_xong"]]
+    df_table.columns = ["MÁY", "SỰ CỐ (TG BÁO)", "DỰ KIẾN"]
+
+    st.dataframe(df_table, use_container_width=True, hide_index=True, height=120)
 
     # SAO CHÉP SỰ CỐ
     su_co_list = [
@@ -271,8 +266,9 @@ with tab2:
           else "N/A"
       )
 
+      # BỎ ICON Ở TIÊU ĐỀ BÁO CÁO SỰ CỐ
       single_text = (
-          f"🛠️ BÁO CÁO SỰ CỐ [{selected_row['trang_thai']}]\n"
+          f"BÁO CÁO SỰ CỐ [{selected_row['trang_thai']}]\n"
           f"MÁY: {selected_row['thiet_bi']}\n"
           f"THỜI GIAN BÁO: {selected_row['thoi_gian_bao']}\n"
           f"TÊN SỰ CỐ: {selected_row['ten_su_co']}\n"
