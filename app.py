@@ -213,11 +213,7 @@ with tab1:
       if missing_fields:
         st.error(f"⚠️ Chưa nhập: {', '.join(missing_fields)}")
       else:
-        df = load_data()
-        new_id = int(df["id"].max() + 1) if not df.empty and "id" in df else 1
-
         new_row = {
-            "id": int(new_id),
             "thiet_bi": thiet_bi.strip(),
             "thoi_gian_bao": get_rounded_time(get_vn_now()),
             "ten_su_co": ten_su_co.strip(),
@@ -227,7 +223,18 @@ with tab1:
             "thoi_gian_xong": "",
         }
 
-        supabase.table("su_co").insert(new_row).execute()
+        try:
+          # Thử gửi dữ liệu không truyền ID (để Supabase tự cấp)
+          supabase.table("su_co").insert(new_row).execute()
+        except Exception:
+          # Nếu Supabase chưa bật Identity, tính ID bằng tay để gửi
+          df = load_data()
+          if not df.empty and "id" in df and df["id"].notna().any():
+            new_id = int(df["id"].max() + 1)
+          else:
+            new_id = 1
+          new_row["id"] = new_id
+          supabase.table("su_co").insert(new_row).execute()
 
         st.session_state.reset_form = True
         st.session_state.show_success_msg = True
