@@ -1,5 +1,5 @@
+from datetime import datetime, timedelta, timezone
 import sqlite3
-from datetime import datetime, timedelta
 import pandas as pd
 import streamlit as st
 
@@ -7,7 +7,13 @@ st.set_page_config(
     page_title="Hệ Thống Báo Cáo Sự Cố", page_icon="🛠️", layout="wide"
 )
 
-DB_NAME = "su_co_v4.db"
+DB_NAME = "su_co_v5.db"
+
+
+# Múi giờ Việt Nam (UTC+7)
+def get_vn_now():
+  vn_tz = timezone(timedelta(hours=7))
+  return datetime.now(vn_tz)
 
 
 def init_db():
@@ -46,7 +52,7 @@ st.markdown(
 )
 
 
-# Hàm làm tròn thời gian thực tế thành mốc 30 phút
+# Hàm làm tròn thời gian thực tế thành mốc 30 phút theo giờ Việt Nam
 def get_rounded_time(dt):
   minute = dt.minute
   if minute < 15:
@@ -66,9 +72,9 @@ for hour in range(24):
   for minute in (0, 30):
     time_slots.append(f"{hour:02d}:{minute:02d}")
 
-now = datetime.now()
-current_hour = now.hour
-current_minute = 30 if now.minute >= 30 else 0
+now_vn = get_vn_now()
+current_hour = now_vn.hour
+current_minute = 30 if now_vn.minute >= 30 else 0
 default_time_str = f"{current_hour:02d}:{current_minute:02d}"
 default_index = (
     time_slots.index(default_time_str) if default_time_str in time_slots else 0
@@ -87,7 +93,7 @@ with tab1:
     col1, col2 = st.columns(2)
     with col1:
       ngay_bao = st.date_input(
-          "Ngày báo", value=now.date(), key="ngay_bao_input"
+          "Ngày báo", value=now_vn.date(), key="ngay_bao_input"
       )
     with col2:
       gio_bao = st.selectbox(
@@ -100,7 +106,7 @@ with tab1:
     col3, col4 = st.columns(2)
     with col3:
       ngay_dk = st.date_input(
-          "Ngày dự kiến", value=now.date(), key="ngay_dk_input"
+          "Ngày dự kiến", value=now_vn.date(), key="ngay_dk_input"
       )
     with col4:
       gio_dk = st.selectbox(
@@ -148,7 +154,6 @@ with tab2:
   conn.close()
 
   if not df.empty:
-    # Bảng hiển thị
     df_display = df.drop(columns=["id"]).rename(
         columns={
             "thiet_bi": "MÁY",
@@ -185,7 +190,10 @@ with tab2:
         if st.button("✅ HOÀN THÀNH SỬA CHỮA"):
           selected_idx = done_list.index(selected_done)
           target_id = int(pending_df.iloc[selected_idx]["id"])
-          actual_done_time = get_rounded_time(datetime.now())
+
+          # Lấy chính xác thời gian bấm nút lúc này theo múi giờ VN
+          actual_click_time = get_vn_now()
+          actual_done_time = get_rounded_time(actual_click_time)
 
           conn = sqlite3.connect(DB_NAME)
           c = conn.cursor()
