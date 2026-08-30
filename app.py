@@ -36,90 +36,18 @@ def init_db():
 
 init_db()
 
-# CSS Tối ưu hiển thị vừa khít 1 màn hình (No Scroll)
+# Giao diện Xanh lá cây - Trắng tối ưu không gian gọn gàng
 st.markdown(
     """
     <style>
-    /* Tổng thể ứng dụng */
-    .stApp { 
-        background-color: #f4fbf7; 
-        color: #1b4332; 
-    }
+    .stApp { background-color: #f4fbf7; color: #1b4332; }
+    div[data-testid="stForm"] { background-color: #ffffff; border: 2px solid #52b788; border-radius: 12px; padding: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+    .stTextInput input, div[data-baseweb="select"] { background-color: #f8fff9 !important; border: 1px solid #74c69d !important; border-radius: 8px !important; color: #1b4332 !important; font-size: 15px !important; }
+    .stButton button, button[kind="FormSubmitButton"] { background: linear-gradient(90deg, #2d6a4f 0%, #40916c 100%) !important; color: white !important; font-weight: bold !important; border-radius: 8px !important; width: 100%; font-size: 15px !important; min-height: 42px !important; }
+    h1, h2, h3, h4 { color: #1b4332 !important; margin-bottom: 0.5rem !important; }
     
-    /* Thu gọn khoảng cách container chính */
-    .block-container {
-        padding-top: 0.8rem !important;
-        padding-bottom: 0.5rem !important;
-        padding-left: 1rem !important;
-        padding-right: 1rem !important;
-        max-width: 100% !important;
-    }
-
-    /* Thu gọn tiêu đề */
-    h1 {
-        font-size: 1.4rem !important;
-        margin-bottom: 0.2rem !important;
-        padding-bottom: 0rem !important;
-    }
-    h2, h3, h4 {
-        font-size: 1.05rem !important;
-        margin-top: 0.2rem !important;
-        margin-bottom: 0.2rem !important;
-    }
-
-    /* Form gọn gàng */
-    div[data-testid="stForm"] { 
-        background-color: #ffffff; 
-        border: 2px solid #52b788; 
-        border-radius: 10px; 
-        padding: 8px 12px !important; 
-        box-shadow: 0 2px 4px rgba(0,0,0,0.05); 
-    }
-    
-    /* Input & Select thu nhỏ chiều cao */
-    .stTextInput input, div[data-baseweb="select"] { 
-        background-color: #f8fff9 !important; 
-        border: 1px solid #74c69d !important; 
-        border-radius: 6px !important; 
-        color: #1b4332 !important; 
-        font-size: 14px !important; 
-        min-height: 36px !important;
-        height: 36px !important;
-    }
-    
-    .stDateInput input {
-        height: 36px !important;
-        font-size: 14px !important;
-    }
-
-    /* Thu nhỏ nhãn field */
-    label {
-        font-size: 13px !important;
-        font-weight: 600 !important;
-        margin-bottom: 2px !important;
-    }
-
-    /* Button tối ưu gọn */
-    .stButton button, button[kind="FormSubmitButton"] { 
-        background: linear-gradient(90deg, #2d6a4f 0%, #40916c 100%) !important; 
-        color: white !important; 
-        font-weight: bold !important; 
-        border-radius: 6px !important; 
-        width: 100%; 
-        font-size: 14px !important; 
-        height: 40px !important;
-        min-height: 40px !important;
-        margin-top: 4px !important;
-    }
-
-    /* Giảm lề giữa các phần tử */
-    div[data-testid="stVerticalBlock"] > div {
-        gap: 0.3rem !important;
-    }
-    
-    hr {
-        margin: 0.4rem 0 !important;
-    }
+    /* Thu gọn khoảng cách padding trên màn hình */
+    .block-container { padding-top: 1.5rem !important; padding-bottom: 1rem !important; }
     </style>
 """,
     unsafe_allow_html=True,
@@ -152,7 +80,7 @@ default_index = (
     time_slots.index(default_time_str) if default_time_str in time_slots else 0
 )
 
-# Quản lý trạng thái reset và thông báo gửi thành công
+# Quản lý Session State
 if "reset_form" not in st.session_state:
   st.session_state.reset_form = False
 
@@ -165,47 +93,52 @@ if st.session_state.reset_form:
   st.session_state["input_nguoi_bao_cao"] = ""
   st.session_state.reset_form = False
 
-st.markdown("### 🛠️ KHAI BÁO & THEO DÕI SỰ CỐ KỸ THUẬT")
+st.title("🛠️ HỆ THỐNG BÁO CÁO & THEO DÕI SỰ CỐ")
 
-# Chia 2 cột màn hình chính: Bên trái Khai Báo (40%), Bên phải Quản Lý & Copy (60%)
-col_left, col_right = st.columns([4, 6], gap="small")
+# CHIA MÀN HÌNH THÀNH 2 CỘT TỶ LỆ SONG SONG (5:7)
+col_left, col_right = st.columns([5, 7])
 
+# --- CỘT TRÁI: NHẬP KHAI BÁO SỰ CỐ ---
 with col_left:
-  st.markdown("##### 📝 KHAI BÁO MỚI")
+  st.subheader("📝 KHAI BÁO SỰ CỐ MỚI")
 
   if st.session_state.show_success_msg:
-    st.success("🎉 ĐÃ GỬI BÁO CÁO THÀNH CÔNG!")
+    st.success("🎉 GỬI BÁO CÁO THÀNH CÔNG!")
     st.balloons()
     st.session_state.show_success_msg = False
 
   with st.form("form_su_co", clear_on_submit=False):
-    thiet_bi = st.text_input("MÁY / THIẾT BỊ *", key="input_thiet_bi")
+    thiet_bi = st.text_input("**MÁY / THIẾT BỊ ***", key="input_thiet_bi")
 
+    st.write("**THỜI GIAN BÁO ***")
     c1, c2 = st.columns(2)
     with c1:
       ngay_bao = st.date_input(
-          "Ngày báo *", value=now_vn.date(), key="ngay_bao_input"
+          "Ngày báo", value=now_vn.date(), key="ngay_bao_input"
       )
     with c2:
       gio_bao = st.selectbox(
-          "Giờ báo *", time_slots, index=default_index, key="gio_bao_input"
+          "Giờ báo", time_slots, index=default_index, key="gio_bao_input"
       )
 
     ten_su_co = st.text_input(
-        "TÊN SỰ CỐ / BỆNH CỦA MÁY *", key="input_ten_su_co"
+        "**TÊN SỰ CỐ / BỆNH MÁY ***", key="input_ten_su_co"
     )
 
+    st.write("**THỜI GIAN DỰ KIẾN HOÀN THÀNH ***")
     c3, c4 = st.columns(2)
     with c3:
       ngay_dk = st.date_input(
-          "Ngày dự kiến *", value=now_vn.date(), key="ngay_dk_input"
+          "Ngày dự kiến", value=now_vn.date(), key="ngay_dk_input"
       )
     with c4:
       gio_dk = st.selectbox(
-          "Giờ dự kiến *", time_slots, index=default_index, key="gio_dk_input"
+          "Giờ dự kiến", time_slots, index=default_index, key="gio_dk_input"
       )
 
-    nguoi_bao_cao = st.text_input("NGƯỜI BÁO CÁO *", key="input_nguoi_bao_cao")
+    nguoi_bao_cao = st.text_input(
+        "**NGƯỜI BÁO CÁO ***", key="input_nguoi_bao_cao"
+    )
 
     submit = st.form_submit_button("🚀 GỬI BÁO CÁO SỰ CỐ")
 
@@ -219,7 +152,9 @@ with col_left:
         missing_fields.append("NGƯỜI BÁO CÁO")
 
       if missing_fields:
-        st.error(f"⚠️ Thiếu: **{', '.join(missing_fields)}**")
+        st.error(
+            f"⚠️ Vui lòng nhập đầy đủ: **{', '.join(missing_fields)}**"
+        )
       else:
         thoi_gian_bao_str = f"{ngay_bao.strftime('%d/%m/%Y')} {gio_bao}"
         du_kien_xong_str = f"{ngay_dk.strftime('%d/%m/%Y')} {gio_dk}"
@@ -246,8 +181,9 @@ with col_left:
         st.session_state.show_success_msg = True
         st.rerun()
 
+# --- CỘT PHẢI: QUẢN LÝ, CẬP NHẬT VÀ SAO CHÉP ---
 with col_right:
-  st.markdown("##### 📊 DANH SÁCH & SAO CHÉP BÁO CÁO")
+  st.subheader("📊 DANH SÁCH & SAO CHÉP BÁO CÁO")
 
   conn = sqlite3.connect(DB_NAME)
   df = pd.read_sql_query(
@@ -258,38 +194,42 @@ with col_right:
   conn.close()
 
   if not df.empty:
-    tab_list, tab_done, tab_copy = st.tabs(
-        ["📋 Danh Sách", "✅ Cập Nhật Xong", "📋 Copy Báo Cáo"]
+    # Hiển thị bảng thu nhỏ vừa khung hình
+    df_display = df.drop(columns=["id"]).rename(
+        columns={
+            "thiet_bi": "MÁY",
+            "thoi_gian_bao": "THỜI GIAN BÁO",
+            "ten_su_co": "TÊN SỰ CỐ",
+            "du_kien_xong": "THỜI GIAN DỰ KIẾN",
+            "nguoi_bao_cao": "NGƯỜI BÁO CÁO",
+            "trang_thai": "TRẠNG THÁI",
+            "thoi_gian_xong": "THỜI GIAN THỰC TẾ",
+        }
     )
+    st.dataframe(df_display, use_container_width=True, height=220)
 
-    with tab_list:
-      df_display = df.drop(columns=["id"]).rename(
-          columns={
-              "thiet_bi": "MÁY",
-              "thoi_gian_bao": "THỜI GIAN BÁO",
-              "ten_su_co": "TÊN SỰ CỐ",
-              "du_kien_xong": "DỰ KIẾN",
-              "nguoi_bao_cao": "NGƯỜI BÁO",
-              "trang_thai": "TRẠNG THÁI",
-              "thoi_gian_xong": "HOÀN THÀNH",
-          }
-      )
-      st.dataframe(df_display, height=260, use_container_width=True)
-
-    with tab_done:
-      pending_df = df[df["trang_thai"] != "✅ Đã xong"]
-      if not pending_df.empty:
+    # NÚT XÁC NHẬN HOÀN THÀNH
+    pending_df = df[df["trang_thai"] != "✅ Đã xong"]
+    if not pending_df.empty:
+      col_d1, col_d2 = st.columns([2, 1])
+      with col_d1:
         done_list = [
-            f"Máy: {row['thiet_bi']} - {row['ten_su_co']} ({row['thoi_gian_bao']})"
+            f"Máy: {row['thiet_bi']} - {row['ten_su_co']}"
             for _, row in pending_df.iterrows()
         ]
         selected_done = st.selectbox(
-            "Chọn sự cố đã sửa xong:", done_list, key="done_select"
+            "Chọn sự cố đã sửa xong:",
+            done_list,
+            key="done_select",
+            label_visibility="collapsed",
         )
-        if st.button("✅ XÁC NHẬN HOÀN THÀNH SỬA CHỮA"):
+      with col_d2:
+        if st.button("✅ BẤM HOÀN THÀNH"):
           selected_idx = done_list.index(selected_done)
           target_id = int(pending_df.iloc[selected_idx]["id"])
-          actual_done_time = get_rounded_time(get_vn_now())
+
+          actual_click_time = get_vn_now()
+          actual_done_time = get_rounded_time(actual_click_time)
 
           conn = sqlite3.connect(DB_NAME)
           c = conn.cursor()
@@ -300,89 +240,111 @@ with col_right:
           )
           conn.commit()
           conn.close()
-          st.success(f"🎉 Đã xong! Thời gian: {actual_done_time}")
+          st.success(f"🎉 Đã xong lúc {actual_done_time}")
           st.rerun()
-      else:
-        st.info("Tất cả sự cố đã được hoàn thành!")
 
-    with tab_copy:
-      copy_mode = st.radio(
-          "Chọn kiểu copy:",
-          ["Copy 1 Sự Cố", "Copy Tất Cả Sự Cố"],
-          horizontal=True,
+    # VÙNG SAO CHÉP ĐỊNH DẠNG XUỐNG DÒNG MỖI TIÊU ĐỀ
+    tab_copy1, tab_copy2, tab_admin = st.tabs(
+        ["📋 Copy Riêng Từng Sự Cố", "📑 Copy Tất Cả", "🔒 Quyền Admin"]
+    )
+
+    with tab_copy1:
+      su_co_list = [
+          f"Máy: {row['thiet_bi']} - {row['ten_su_co']} [{row['trang_thai']}]"
+          for _, row in df.iterrows()
+      ]
+      selected_option = st.selectbox(
+          "Chọn sự cố cần copy:",
+          su_co_list,
+          index=0,
+          label_visibility="collapsed",
       )
 
-      if copy_mode == "Copy 1 Sự Cố":
-        su_co_list = [
-            f"Máy: {row['thiet_bi']} - {row['ten_su_co']} [{row['trang_thai']}]"
+      if selected_option:
+        selected_idx = su_co_list.index(selected_option)
+        selected_row = df.iloc[selected_idx]
+
+        nguoi_gui = (
+            selected_row["nguoi_bao_cao"]
+            if (
+                pd.notna(selected_row["nguoi_bao_cao"])
+                and str(selected_row["nguoi_bao_cao"]).strip()
+            )
+            else "N/A"
+        )
+
+        # ĐỊNH DẠNG XUỐNG DÒNG RÕ RÀNG MỖI TIÊU ĐỀ
+        single_text = (
+            f"🛠️ BÁO CÁO SỰ CỐ [{selected_row['trang_thai']}]\n"
+            f"MÁY: {selected_row['thiet_bi']}\n"
+            f"THỜI GIAN BÁO: {selected_row['thoi_gian_bao']}\n"
+            f"TÊN SỰ CỐ: {selected_row['ten_su_co']}\n"
+            f"THỜI GIAN DỰ KIẾN: {selected_row['du_kien_xong']}\n"
+        )
+        if selected_row["trang_thai"] == "✅ Đã xong":
+          single_text += (
+              f"THỜI GIAN HOÀN THÀNH THỰC TẾ: {selected_row['thoi_gian_xong']}\n"
+          )
+        single_text += f"NGƯỜI BÁO CÁO: {nguoi_gui}"
+
+        st.code(single_text, language="text")
+
+    with tab_copy2:
+      all_text = (
+          "📋 DANH SÁCH BÁO CÁO SỰ CỐ:\n-----------------------------------\n"
+      )
+      for _, row in df.iterrows():
+        nguoi_gui = (
+            row["nguoi_bao_cao"]
+            if (
+                pd.notna(row["nguoi_bao_cao"])
+                and str(row["nguoi_bao_cao"]).strip()
+            )
+            else "N/A"
+        )
+        all_text += (
+            f"🔹 MÁY: {row['thiet_bi']} [{row['trang_thai']}]\n"
+            f"THỜI GIAN BÁO: {row['thoi_gian_bao']}\n"
+            f"TÊN SỰ CỐ: {row['ten_su_co']}\n"
+            f"THỜI GIAN DỰ KIẾN: {row['du_kien_xong']}\n"
+        )
+        if row["trang_thai"] == "✅ Đã xong":
+          all_text += (
+              f"THỜI GIAN HOÀN THÀNH THỰC TẾ: {row['thoi_gian_xong']}\n"
+          )
+        all_text += f"NGƯỜI BÁO CÁO: {nguoi_gui}\n\n"
+
+      st.code(all_text, language="text")
+
+    with tab_admin:
+      col_a1, col_a2 = st.columns([2, 1])
+      with col_a1:
+        admin_pass = st.text_input(
+            "Mật khẩu Admin:", type="password", placeholder="Nhập mật khẩu..."
+        )
+        del_list = [
+            f"Máy: {row['thiet_bi']} - {row['ten_su_co']}"
             for _, row in df.iterrows()
         ]
-        selected_option = st.selectbox(
-            "Chọn sự cố:", su_co_list, index=0, label_visibility="collapsed"
-        )
-        if selected_option:
-          selected_idx = su_co_list.index(selected_option)
-          selected_row = df.iloc[selected_idx]
-          nguoi_gui = (
-              selected_row["nguoi_bao_cao"]
-              if (
-                  pd.notna(selected_row["nguoi_bao_cao"])
-                  and str(selected_row["nguoi_bao_cao"]).strip()
-              )
-              else "N/A"
-          )
+        selected_del = st.selectbox("Chọn sự cố xóa:", del_list)
+      with col_a2:
+        st.write(" ")
+        st.write(" ")
+        if st.button("❌ XÓA SỰ CỐ"):
+          if admin_pass == "230":
+            del_idx = del_list.index(selected_del)
+            del_id = int(df.iloc[del_idx]["id"])
 
-          # ĐỊNH DẠNG XUỐNG DÒNG RÕ RÀNG CHO TỪNG TIÊU ĐỀ
-          single_text = (
-              f"🛠️ BÁO CÁO SỰ CỐ [{selected_row['trang_thai']}]\n"
-              f"• MÁY / THIẾT BỊ:\n"
-              f"  {selected_row['thiet_bi']}\n"
-              f"• THỜI GIAN BÁO:\n"
-              f"  {selected_row['thoi_gian_bao']}\n"
-              f"• TÊN SỰ CỐ / BỆNH MÁY:\n"
-              f"  {selected_row['ten_su_co']}\n"
-              f"• DỰ KIẾN HOÀN THÀNH:\n"
-              f"  {selected_row['du_kien_xong']}\n"
-          )
-          if selected_row["trang_thai"] == "✅ Đã xong":
-            single_text += (
-                f"• HOÀN THÀNH THỰC TẾ:\n  {selected_row['thoi_gian_xong']}\n"
-            )
-          single_text += f"• NGƯỜI BÁO CÁO:\n  {nguoi_gui}"
+            conn = sqlite3.connect(DB_NAME)
+            c = conn.cursor()
+            c.execute("DELETE FROM su_co WHERE id=?", (del_id,))
+            conn.commit()
+            conn.close()
 
-          st.code(single_text, language="text")
-
-      else:
-        # ĐỊNH DẠNG XUỐNG DÒNG DÀNH CHO TẤT CẢ SỰ CỐ
-        all_text = (
-            "📋 DANH SÁCH BÁO CÁO SỰ CỐ\n===================================\n\n"
-        )
-        for idx, row in df.iterrows():
-          nguoi_gui = (
-              row["nguoi_bao_cao"]
-              if (
-                  pd.notna(row["nguoi_bao_cao"])
-                  and str(row["nguoi_bao_cao"]).strip()
-              )
-              else "N/A"
-          )
-          all_text += (
-              f"🔹 MÁY / THIẾT BỊ:\n"
-              f"  {row['thiet_bi']} [{row['trang_thai']}]\n"
-              f"• THỜI GIAN BÁO:\n"
-              f"  {row['thoi_gian_bao']}\n"
-              f"• TÊN SỰ CỐ:\n"
-              f"  {row['ten_su_co']}\n"
-              f"• DỰ KIẾN HOÀN THÀNH:\n"
-              f"  {row['du_kien_xong']}\n"
-          )
-          if row["trang_thai"] == "✅ Đã xong":
-            all_text += (
-                f"• HOÀN THÀNH THỰC TẾ:\n  {row['thoi_gian_xong']}\n"
-            )
-          all_text += f"• NGƯỜI BÁO CÁO:\n  {nguoi_gui}\n\n-----------------------------------\n\n"
-
-        st.code(all_text, language="text")
+            st.success("🗑️ Đã xóa thành công!")
+            st.rerun()
+          else:
+            st.error("🔑 Sai mật khẩu!")
 
   else:
-    st.info("Chưa có báo cáo sự cố nào.")
+    st.info("Chưa có báo cáo sự cố nào trong hệ thống.")
