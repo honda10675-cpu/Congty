@@ -39,82 +39,100 @@ def init_db():
 
 init_db()
 
-# CSS Siêu Thu Gọn & Xóa Logo/Header Streamlit
+# CSS ẨN HOÀN TOÀN LOGO & TỐI ƯU HIỂN THỊ 1 MÀN HÌNH
 st.markdown(
     """
     <style>
-    /* Ẩn Header, Footer, Logo Streamlit, Toolbar, Nút Fork */
-    header, footer, #MainMenu, [data-testid="stToolbar"], .stAppDeployButton, [data-testid="stStatusWidget"] {
+    /* 1. Ẩn hoàn toàn logo Streamlit, Crown, Footer và Header */
+    header, footer, #MainMenu, [data-testid="stToolbar"], 
+    .stAppDeployButton, [data-testid="stStatusWidget"],
+    div[class*="viewerBadge"], div[class*="styles_viewerBadge"],
+    a[href*="streamlit.io"], iframe[title*="Streamlit"] {
         display: none !important;
         visibility: hidden !important;
+        opacity: 0 !important;
+        height: 0 !important;
+        width: 0 !important;
     }
     
     .stApp { background-color: #f4fbf7; color: #1b4332; }
     
-    /* Thu gọn lề tối đa cho vừa 1 màn hình */
+    /* 2. Co lề tối đa cho vừa gọn 1 màn hình di động */
     .block-container { 
-        padding-top: 0.5rem !important; 
-        padding-bottom: 0.5rem !important; 
-        padding-left: 0.5rem !important; 
-        padding-right: 0.5rem !important; 
+        padding-top: 0.2rem !important; 
+        padding-bottom: 0.2rem !important; 
+        padding-left: 0.4rem !important; 
+        padding-right: 0.4rem !important; 
     }
     
-    /* Thu nhỏ tiêu đề */
-    h1 { font-size: 1.1rem !important; margin: 0 !important; font-weight: 800 !important; text-align: center; color: #1b4332; }
-    h2, h3, h4 { font-size: 0.95rem !important; margin: 2px 0 !important; }
+    /* 3. Thu nhỏ phông chữ tiêu đề */
+    h1 { font-size: 1.0rem !important; margin: 0 !important; font-weight: 800 !important; text-align: center; color: #1b4332; }
     
-    /* Khung Form cực kỳ siêu gọn */
+    /* 4. Khung Form siêu gọn */
     div[data-testid="stForm"] { 
         background-color: #ffffff; 
         border: 1.5px solid #52b788; 
         border-radius: 8px; 
-        padding: 6px 10px !important; 
+        padding: 4px 8px !important; 
     }
     
-    /* Giảm kích thước nhãn và khoảng cách ô nhập */
+    /* 5. Giảm khoảng cách giữa các ô nhập liệu */
     .stTextInput label, .stSelectbox label, .stDateInput label { 
-        font-size: 12px !important; 
+        font-size: 11px !important; 
         margin-bottom: 0px !important; 
         padding-bottom: 0px !important;
         font-weight: bold;
     }
     
     div[data-testid="stVerticalBlock"] > div {
-        gap: 0.3rem !important;
+        gap: 0.15rem !important;
     }
     
-    /* Chiều cao ô nhập liệu chuẩn siêu gọn */
+    /* Chiều cao ô nhập liệu chuẩn */
     .stTextInput input, div[data-baseweb="select"], div[data-baseweb="input"] { 
         background-color: #f8fff9 !important; 
         border: 1px solid #74c69d !important; 
         border-radius: 5px !important; 
         color: #1b4332 !important; 
-        font-size: 13px !important; 
-        height: 34px !important; 
-        min-height: 34px !important;
+        font-size: 12px !important; 
+        height: 32px !important; 
+        min-height: 32px !important;
     }
     
-    /* Nút bấm nổi bật nhưng gọn */
+    /* Nút bấm lớn vừa tay */
     .stButton button, button[kind="FormSubmitButton"] { 
         background: linear-gradient(90deg, #2d6a4f 0%, #40916c 100%) !important; 
         color: white !important; 
         font-weight: bold !important; 
         border-radius: 6px !important; 
         width: 100%; 
-        font-size: 14px !important; 
-        height: 38px !important; 
-        min-height: 38px !important;
-        margin-top: 4px !important; 
-    }
-    
-    /* Tab bar gọn nhẹ */
-    button[data-baseweb="tab"] { 
         font-size: 13px !important; 
-        font-weight: bold !important; 
-        padding: 4px 8px !important;
+        height: 36px !important; 
+        min-height: 36px !important;
+        margin-top: 2px !important; 
     }
     
-    hr { margin: 0.4rem 0 !important; }
+    /* Tab bar siêu gọn */
+    button[data-baseweb="tab"] { 
+        font-size: 12px !important; 
+        font-weight: bold !important; 
+        padding: 2px 6px !important;
+    }
+    
+    /* Khung hiển thị nội dung Copy xuống dòng chuẩn */
+    .copy-box {
+        background-color: #ffffff;
+        border: 1px solid #74c69d;
+        border-radius: 6px;
+        padding: 8px;
+        font-family: monospace;
+        font-size: 12px;
+        line-height: 1.4;
+        white-space: pre-wrap;
+        word-break: break-word;
+        color: #1b4332;
+        margin-top: 4px;
+    }
     </style>
 """,
     unsafe_allow_html=True,
@@ -258,39 +276,9 @@ with tab2:
             "thoi_gian_xong": "TG XONG",
         }
     )
-    st.dataframe(df_display, use_container_width=True, height=130)
+    st.dataframe(df_display, use_container_width=True, height=100)
 
-    # CẬP NHẬT HOÀN THÀNH
-    pending_df = df[df["trang_thai"] != "✅ Đã xong"]
-    if not pending_df.empty:
-      done_list = [
-          f"{row['thiet_bi']} - {row['ten_su_co']}"
-          for _, row in pending_df.iterrows()
-      ]
-      selected_done = st.selectbox(
-          "Sự cố đã sửa xong:", done_list, key="done_select"
-      )
-
-      if st.button("✅ BẤM XÁC NHẬN HOÀN THÀNH"):
-        selected_idx = done_list.index(selected_done)
-        target_id = int(pending_df.iloc[selected_idx]["id"])
-
-        actual_click_time = get_vn_now()
-        actual_done_time = get_rounded_time(actual_click_time)
-
-        conn = sqlite3.connect(DB_NAME)
-        c = conn.cursor()
-        c.execute(
-            "UPDATE su_co SET trang_thai='✅ Đã xong', thoi_gian_xong=? WHERE"
-            " id=?",
-            (actual_done_time, target_id),
-        )
-        conn.commit()
-        conn.close()
-        st.success(f"🎉 Hoàn thành lúc: {actual_done_time}")
-        st.rerun()
-
-    # SAO CHÉP TỪNG SỰ CỐ
+    # SAO CHÉP TỪNG SỰ CỐ CÓ XUỐNG DÒNG RÕ RÀNG
     su_co_list = [
         f"{row['thiet_bi']} - {row['ten_su_co']} [{row['trang_thai']}]"
         for _, row in df.iterrows()
@@ -321,10 +309,41 @@ with tab2:
         single_text += f"THỜI GIAN HOÀN THÀNH THỰC TẾ: {selected_row['thoi_gian_xong']}\n"
       single_text += f"NGƯỜI BÁO CÁO: {nguoi_gui}"
 
+      # Hiển thị mã sao chép xuống dòng chuẩn
       st.code(single_text, language="text")
 
+    # CẬP NHẬT HOÀN THÀNH
+    pending_df = df[df["trang_thai"] != "✅ Đã xong"]
+    if not pending_df.empty:
+      done_list = [
+          f"{row['thiet_bi']} - {row['ten_su_co']}"
+          for _, row in pending_df.iterrows()
+      ]
+      selected_done = st.selectbox(
+          "Xác nhận xong:", done_list, key="done_select"
+      )
+
+      if st.button("✅ XÁC NHẬN HOÀN THÀNH"):
+        selected_idx = done_list.index(selected_done)
+        target_id = int(pending_df.iloc[selected_idx]["id"])
+
+        actual_click_time = get_vn_now()
+        actual_done_time = get_rounded_time(actual_click_time)
+
+        conn = sqlite3.connect(DB_NAME)
+        c = conn.cursor()
+        c.execute(
+            "UPDATE su_co SET trang_thai='✅ Đã xong', thoi_gian_xong=? WHERE"
+            " id=?",
+            (actual_done_time, target_id),
+        )
+        conn.commit()
+        conn.close()
+        st.success(f"🎉 Đã xong lúc: {actual_done_time}")
+        st.rerun()
+
     # ADMIN XÓA
-    with st.expander("🔑 Admin xóa sự cố"):
+    with st.expander("🔑 Admin xóa"):
       admin_pass = st.text_input("Mật khẩu Admin:", type="password")
       del_list = [
           f"{row['thiet_bi']} - {row['ten_su_co']}" for _, row in df.iterrows()
@@ -342,7 +361,7 @@ with tab2:
           conn.commit()
           conn.close()
 
-          st.success("🗑️ Đã xóa thành công!")
+          st.success("🗑️ Đã xóa!")
           st.rerun()
         else:
           st.error("🔑 Sai mật khẩu!")
