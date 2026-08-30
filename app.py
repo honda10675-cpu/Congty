@@ -7,9 +7,12 @@ st.set_page_config(
     page_title="Hệ Thống Báo Cáo Sự Cố", page_icon="🛠️", layout="wide"
 )
 
+# Sử dụng DB phiên bản mới để tránh xung đột với DB cũ
+DB_NAME = "su_co_v2.db"
+
 
 def init_db():
-  conn = sqlite3.connect("su_co_web.db")
+  conn = sqlite3.connect(DB_NAME)
   c = conn.cursor()
   c.execute("""
         CREATE TABLE IF NOT EXISTS su_co (
@@ -21,24 +24,19 @@ def init_db():
             ngay_tao TEXT
         )
     """)
-  # Tự động cập nhật cột nếu cơ sở dữ liệu cũ chưa có
-  c.execute("PRAGMA table_info(su_co)")
-  columns = [col[1] for col in c.fetchall()]
-  if "khung_gio" not in columns:
-    c.execute("ALTER TABLE su_co ADD COLUMN khung_gio TEXT")
   conn.commit()
   conn.close()
 
 
 init_db()
 
-# Danh sách 48 khung giờ (mỗi nấc 30 phút)
+# Danh sách 48 khung giờ (bước nhảy 30 phút)
 time_slots = []
 for hour in range(24):
   for minute in (0, 30):
     time_slots.append(f"{hour:02d}:{minute:02d}")
 
-# Tính toán khung giờ hiện tại làm mặc định
+# Lấy thời gian thực tế hiện tại
 now = datetime.now()
 current_hour = now.hour
 current_minute = 30 if now.minute >= 30 else 0
@@ -60,10 +58,8 @@ with tab1:
 
     col1, col2 = st.columns(2)
     with col1:
-      # Tự động hiển thị ngày thực tế hiện tại
       ngay_phat_sinh = st.date_input("Ngày phát sinh", value=now.date())
     with col2:
-      # Tự động chọn khung giờ gần nhất
       khung_gio_selected = st.selectbox(
           "Khung giờ phát sinh (30 phút)",
           time_slots,
@@ -73,7 +69,7 @@ with tab1:
     submit = st.form_submit_button("🚀 GỬI BÁO CÁO SỰ CỐ")
 
     if submit:
-      if not ten_su_co or not thiet_bi:
+      if not ten_su_co.strip() or not thiet_bi.strip():
         st.error("⚠️ Vui lòng điền Tên sự cố và Thiết bị!")
       else:
         ngay_tao_str = now.strftime("%Y-%m-%d %H:%M")
@@ -81,7 +77,7 @@ with tab1:
             f"{ngay_phat_sinh.strftime('%d/%m/%Y')} {khung_gio_selected}"
         )
 
-        conn = sqlite3.connect("su_co_web.db")
+        conn = sqlite3.connect(DB_NAME)
         c = conn.cursor()
         c.execute(
             """
@@ -102,7 +98,7 @@ with tab1:
 
 with tab2:
   st.subheader("Danh sách quản lý & Sao chép sự cố")
-  conn = sqlite3.connect("su_co_web.db")
+  conn = sqlite3.connect(DB_NAME)
   df = pd.read_sql_query("SELECT * FROM su_co ORDER BY id DESC", conn)
   conn.close()
 
@@ -110,20 +106,16 @@ with tab2:
     st.dataframe(df, use_container_width=True)
     st.divider()
 
-    # Sao chép TOÀN BỘ
+    # Copy TOÀN BỘ
     st.subheader("📋 Sao chép toàn bộ sự cố")
     all_text = "📋 DANH SÁCH BÁO CÁO SỰ CỐ:\n-----------------------------------\n"
     for _, row in df.iterrows():
       nguoi_gui = (
           row["nguoi_bao_cao"]
-          if ("nguoi_bao_cao" in row and pd.notna(row["nguoi_bao_cao"]))
+          if (pd.notna(row["nguoi_bao_cao"]) and str(row["nguoi_bao_cao"]).strip())
           else "N/A"
       )
-      gio_lay = (
-          row["khung_gio"]
-          if ("khung_gio" in row and pd.notna(row["khung_gio"]))
-          else row.get("ngay_tao", "")
-      )
+      gio_lay = row["khung_gio"] if pd.notna(row["khung_gio"]) else ""
       all_text += (
           f"🔹 [ID {row['id']}] {row['ten_su_co']} - Máy: {row['thiet_bi']}\n"
       )
@@ -132,7 +124,7 @@ with tab2:
     st.code(all_text, language="text")
     st.divider()
 
-    # Sao chép RIÊNG
+    # Copy RIÊNG
     st.subheader("🔍 Sao chép riêng từng sự cố")
     su_co_list = [
         f"ID {row['id']} - {row['ten_su_co']} ({row['thiet_bi']})"
@@ -147,18 +139,15 @@ with tab2:
       nguoi_gui = (
           selected_row["nguoi_bao_cao"]
           if (
-              "nguoi_bao_cao" in selected_row
-              and pd.notna(selected_row["nguoi_bao_cao"])
+              pd.notna(selected_row["nguoi_bao_cao"])
+              and str(selected_row["nguoi_bao_cao"]).strip()
           )
           else "N/A"
       )
       gio_lay = (
           selected_row["khung_gio"]
-          if (
-              "khung_gio" in selected_row
-              and pd.notna(selected_row["khung_gio"])
-          )
-          else selected_row.get("ngay_tao", "")
+          if pd.notna(selected_row["khung_gio"])
+          else ""
       )
 
       single_text = (
