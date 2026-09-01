@@ -1,5 +1,7 @@
+import json
 from datetime import datetime, timedelta, timezone
-from deep_translator import GoogleTranslator
+import urllib.parse
+import urllib.request
 import pandas as pd
 import streamlit as st
 import streamlit.components.v1 as components
@@ -11,7 +13,7 @@ SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJ
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 st.set_page_config(
-    page_title="Báo Cáo & Theo Dõi Sự Cố | 故障报告与 hát",
+    page_title="Báo Cáo & Theo Dõi Sự Cố | 故障报告与跟踪",
     page_icon="🛠️",
     layout="centered",
     initial_sidebar_state="collapsed",
@@ -19,12 +21,15 @@ st.set_page_config(
 
 
 def auto_translate_to_zh(text):
-  """Hàm tự động dịch tiếng Việt sang tiếng Trung Giản Thể"""
+  """Tự động dịch Tiếng Việt sang Tiếng Trung dùng API Google (không cần thư viện cài thêm)"""
   if not text or not text.strip():
     return ""
   try:
-    translated = GoogleTranslator(source="vi", target="zh-CN").translate(text)
-    return translated
+    url = f"https://translate.googleapis.com/translate_a/single?client=gtx&sl=vi&tl=zh-CN&dt=t&q={urllib.parse.quote(text)}"
+    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+    with urllib.request.urlopen(req) as response:
+      result = json.loads(response.read().decode("utf-8"))
+      return result[0][0][0]
   except Exception:
     return text
 
@@ -197,7 +202,7 @@ with tab1:
     col3, col4 = st.columns(2)
     with col3:
       ngay_dk = st.date_input(
-          "Ngày dự kiến completion / 预计完成日期 *",
+          "Ngày dự kiến hoàn thành / 预计完成日期 *",
           value=now_vn.date(),
           key="ngay_dk_input",
       )
@@ -226,9 +231,8 @@ with tab1:
       if missing_fields:
         st.error(f"⚠️ Chưa nhập / 未填写: {', '.join(missing_fields)}")
       else:
-        with st.spinner("Đang tự động dịch sang tiếng Trung..."):
+        with st.spinner("Đang dịch sang tiếng Trung..."):
           ten_su_co_zh = auto_translate_to_zh(ten_su_co.strip())
-          # Ghép song ngữ Việt - Trung
           full_su_co_bilingual = f"{ten_su_co.strip()} ({ten_su_co_zh})"
 
         if str(gio_dk) == UNKNOWN_TIME_OPTION:
