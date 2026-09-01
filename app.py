@@ -9,7 +9,7 @@ from supabase import create_client
 
 # --- CẤU HÌNH SUPABASE ---
 SUPABASE_URL = "https://sndzaqqqrxoqlzemgboy.supabase.co"
-SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNuZHphcXFxcnhvcWx6ZW1nYm95Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgxMDM1MDMsImV4cCI6MjEwMzY3OTUwM30.N-7hXggITi6yM8VZPtDMWehb1_i1IsR6P5vDMQ6-hJg"  # Thay bằng Anon Key chuẩn của anh
+SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNuZHphcXFxcnhvcWx6ZW1nYm95Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgxMDM1MDMsImV4cCI6MjEwMzY3OTUwM30.N-7hXggITi6yM8VZPtDMWehb1_i1IsR6P5vDMQ6-hJg"  # Thay bằng Anon Key của anh
 
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
@@ -21,7 +21,7 @@ st.set_page_config(
 )
 
 
-# --- HÀM DỊCH ĐA TẦNG (ĐẢM BẢO LUÔN DỊCH ĐƯỢC TIẾNG TRUNG) ---
+# --- HÀM DỊCH ĐA TẦNG (VIỆT -> TRUNG) ---
 def auto_translate_to_zh(text):
   if not text or not text.strip():
     return ""
@@ -34,11 +34,11 @@ def auto_translate_to_zh(text):
       )
   }
 
-  # Cách 1: Google Translate API (v1)
+  # Cách 1: Google Translate API
   try:
     url = f"https://translate.googleapis.com/translate_a/single?client=gtx&sl=vi&tl=zh-CN&dt=t&q={urllib.parse.quote(query_text)}"
     req = urllib.request.Request(url, headers=headers)
-    with urllib.request.urlopen(req, timeout=4) as response:
+    with urllib.request.urlopen(req, timeout=3) as response:
       result = json.loads(response.read().decode("utf-8"))
       if result and len(result) > 0 and result[0]:
         zh_parts = [
@@ -50,11 +50,11 @@ def auto_translate_to_zh(text):
   except Exception:
     pass
 
-  # Cách 2: MyMemory Translation API (Dự phòng 1)
+  # Cách 2: MyMemory API
   try:
     url = f"https://api.mymemory.translated.net/get?q={urllib.parse.quote(query_text)}&langpair=vi|zh-CN"
     req = urllib.request.Request(url, headers=headers)
-    with urllib.request.urlopen(req, timeout=4) as response:
+    with urllib.request.urlopen(req, timeout=3) as response:
       data = json.loads(response.read().decode("utf-8"))
       if data and "responseData" in data and "translatedText" in data["responseData"]:
         res = data["responseData"]["translatedText"].strip()
@@ -63,20 +63,30 @@ def auto_translate_to_zh(text):
   except Exception:
     pass
 
-  # Cách 3: Lingva Translate API (Dự phòng 2)
-  try:
-    url = f"https://lingva.ml/api/v1/vi/zh/{urllib.parse.quote(query_text)}"
-    req = urllib.request.Request(url, headers=headers)
-    with urllib.request.urlopen(req, timeout=4) as response:
-      data = json.loads(response.read().decode("utf-8"))
-      if data and "translation" in data:
-        res = data["translation"].strip()
-        if res:
-          return res
-  except Exception:
-    pass
-
   return ""
+
+
+# --- HÀM BẮT BUỘC TẠO CHỮ TRUNG DÙ BÁO CÁO CŨ HAY MỚI ---
+@st.cache_data(ttl=3600)
+def ensure_bilingual(text_content):
+  if not text_content:
+    return ""
+
+  text_str = str(text_content).strip()
+
+  # Nếu đã có thẻ tiếng Trung hoặc HTML thì giữ nguyên
+  if "<br>" in text_str or "<span" in text_str:
+    return text_str
+
+  # Nếu chưa có chữ Trung (dữ liệu cũ), tiến hành dịch trực tiếp
+  zh = auto_translate_to_zh(text_str)
+  if zh and zh.lower() != text_str.lower():
+    return (
+        f"{text_str}<br><span"
+        f" style='color:#2d6a4f;font-weight:bold;'>{zh}</span>"
+    )
+
+  return text_str
 
 
 def get_vn_now():
@@ -372,7 +382,8 @@ with tab2:
       else:
         thiet_bi_display = f"<b>{row['thiet_bi']}</b>"
 
-      ten_su_co_display = str(row["ten_su_co"])
+      # Đảm bảo hiển thị song ngữ cả cho dòng chưa có chữ Trung
+      ten_su_co_display = ensure_bilingual(row["ten_su_co"])
 
       row_html = (
           f"<tr><td style='width: 8%; font-weight: bold;"
