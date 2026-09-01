@@ -34,7 +34,6 @@ def auto_translate_to_zh(text):
       )
   }
 
-  # Cách 1: Google Translate API
   try:
     url = f"https://translate.googleapis.com/translate_a/single?client=gtx&sl=vi&tl=zh-CN&dt=t&q={urllib.parse.quote(query_text)}"
     req = urllib.request.Request(url, headers=headers)
@@ -50,7 +49,6 @@ def auto_translate_to_zh(text):
   except Exception:
     pass
 
-  # Cách 2: MyMemory API
   try:
     url = f"https://api.mymemory.translated.net/get?q={urllib.parse.quote(query_text)}&langpair=vi|zh-CN"
     req = urllib.request.Request(url, headers=headers)
@@ -91,7 +89,6 @@ def get_vn_now():
   return datetime.now(vn_tz)
 
 
-# --- HÀM TẠO THỜI GIAN CÓ 4 KHOẢNG TRẮNG GIỮA NGÀY VÀ GIỜ ---
 def get_rounded_time(dt):
   minute = dt.minute
   if minute < 15:
@@ -102,7 +99,6 @@ def get_rounded_time(dt):
     rounded_dt = (dt + timedelta(hours=1)).replace(
         minute=0, second=0, microsecond=0
     )
-  # Thêm 4 khoảng trắng (&nbsp;&nbsp;&nbsp;&nbsp;) giữa ngày và giờ
   return rounded_dt.strftime("%d/%m/%Y") + "    " + rounded_dt.strftime("%H:%M")
 
 
@@ -110,10 +106,8 @@ def format_tg_bao(tg_str):
   if not tg_str:
     return ""
   tg_clean = str(tg_str).strip()
-  # Nếu dữ liệu cũ bị dính dền (dạng 10 ký tự ngày + 5 ký tự giờ = 15 ký tự)
   if len(tg_clean) == 15 and " " not in tg_clean and "&nbsp;" not in tg_clean:
     return f"{tg_clean[:10]}&nbsp;&nbsp;&nbsp;&nbsp;{tg_clean[10:]}"
-  # Thêm 4 khoảng trắng chuẩn HTML
   return tg_clean.replace(" ", "&nbsp;&nbsp;&nbsp;&nbsp;")
 
 
@@ -126,9 +120,14 @@ def load_data():
     return pd.DataFrame()
 
 
+# --- CSS ÉP LIGHT MODE TOÀN BỘ VÀ KHẮC PHỤC LỖI HIỂN THỊ DARK MODE ---
 st.markdown(
     """
     <style>
+    :root {
+        color-scheme: light !important;
+    }
+
     header, footer, #MainMenu, [data-testid="stToolbar"], 
     .stAppDeployButton, [data-testid="stStatusWidget"],
     div[class*="viewerBadge"], div[class*="styles_viewerBadge"],
@@ -140,7 +139,10 @@ st.markdown(
         pointer-events: none !important;
     }
 
-    .stApp { background-color: #f4fbf7; color: #1b4332; }
+    .stApp { 
+        background-color: #f4fbf7 !important; 
+        color: #1b4332 !important; 
+    }
 
     .block-container { 
         padding-top: 0.1rem !important; 
@@ -149,19 +151,58 @@ st.markdown(
         padding-right: 0.2rem !important; 
     }
 
-    h1 { font-size: 0.9rem !important; margin: 0 !important; font-weight: 800 !important; text-align: center; color: #1b4332; }
+    h1 { 
+        font-size: 0.9rem !important; 
+        margin: 0 !important; 
+        font-weight: 800 !important; 
+        text-align: center; 
+        color: #1b4332 !important; 
+    }
 
+    /* Ép nhãn ô nhập liệu rõ ràng, không bị chìm/mờ */
+    .stTextInput label, .stSelectbox label, .stDateInput label, label p { 
+        font-size: 11px !important; 
+        margin-bottom: 2px !important; 
+        font-weight: bold !important;
+        color: #1b4332 !important;
+        opacity: 1 !important;
+    }
+
+    /* Ô nhập liệu chuẩn màu sáng */
+    .stTextInput input, div[data-baseweb="select"], div[data-baseweb="input"], input { 
+        background-color: #ffffff !important; 
+        color: #1b4332 !important;
+        border: 1.5px solid #74c69d !important; 
+        border-radius: 5px !important; 
+        font-size: 12px !important; 
+        height: 34px !important; 
+        min-height: 34px !important;
+    }
+
+    div[data-baseweb="select"] * {
+        background-color: #ffffff !important;
+        color: #1b4332 !important;
+    }
+
+    div[data-testid="stForm"] { 
+        background-color: #ffffff !important; 
+        border: 1.5px solid #52b788 !important; 
+        border-radius: 8px !important; 
+        padding: 8px !important; 
+    }
+
+    /* Bảng hiển thị */
     .mobile-table-container { width: 100%; margin-bottom: 8px; background: white; padding: 4px; border-radius: 4px;}
     .mobile-table {
         width: 100%;
         border-collapse: collapse;
         font-size: 11px !important;
-        background-color: #ffffff;
+        background-color: #ffffff !important;
         table-layout: fixed;
     }
     .mobile-table th {
-        background-color: #2d6a4f;
-        color: #ffffff;
+        background-color: #2d6a4f !important;
+        color: #ffffff !important;
         padding: 5px 2px;
         text-align: center;
         border: 1px solid #52b788;
@@ -176,47 +217,27 @@ st.markdown(
         font-size: 11px;
         vertical-align: middle;
         line-height: 1.25;
+        color: #1b4332 !important;
     }
 
-    div[data-testid="stForm"] { 
-        background-color: #ffffff; 
-        border: 1.5px solid #52b788; 
-        border-radius: 6px; 
-        padding: 4px 6px !important; 
-    }
-
-    .stTextInput label, .stSelectbox label, .stDateInput label { 
-        font-size: 10px !important; 
-        margin-bottom: 0px !important; 
-        font-weight: bold;
-    }
-
-    div[data-testid="stVerticalBlock"] > div { gap: 0.15rem !important; }
-
-    .stTextInput input, div[data-baseweb="select"], div[data-baseweb="input"] { 
-        background-color: #f8fff9 !important; 
-        border: 1px solid #74c69d !important; 
-        border-radius: 4px !important; 
-        font-size: 11px !important; 
-        height: 30px !important; 
-        min-height: 30px !important;
-    }
-
+    /* Nút bấm */
     .stButton button, button[kind="FormSubmitButton"] { 
         background: linear-gradient(90deg, #2d6a4f 0%, #40916c 100%) !important; 
-        color: white !important; 
+        color: #ffffff !important; 
         font-weight: bold !important; 
-        border-radius: 5px !important; 
-        font-size: 11px !important; 
-        height: 34px !important; 
-        min-height: 34px !important;
-        margin-top: 2px !important; 
+        border-radius: 6px !important; 
+        font-size: 12px !important; 
+        height: 36px !important; 
+        min-height: 36px !important;
+        margin-top: 4px !important; 
+        border: none !important;
     }
 
     button[data-baseweb="tab"] { 
-        font-size: 10px !important; 
+        font-size: 11px !important; 
         font-weight: bold !important; 
-        padding: 2px 4px !important;
+        padding: 4px 6px !important;
+        color: #1b4332 !important;
     }
     </style>
 """,
