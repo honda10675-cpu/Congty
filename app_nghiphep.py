@@ -8,12 +8,10 @@ from supabase import create_client
 
 # --- CẤU HÌNH SUPABASE ---
 SUPABASE_URL = "https://sndzaqqqrxoqlzemgboy.supabase.co"
-# Dùng chung SUPABASE_KEY với app.py của anh
 SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNuZHphcXFxcnhvcWx6ZW1nYm95Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgxMDM1MDMsImV4cCI6MjEwMzY3OTUwM30.N-7hXggITi6yM8VZPtDMWehb1_i1IsR6P5vDMQ6-hJg"
 
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
-
-ADMIN_PASSWORD = "123456"  # Mật khẩu duyệt Admin (Anh có thể đổi thành mật khẩu tùy chọn)
+ADMIN_PASSWORD = "023"  # Mật khẩu quản lý / sửa / xóa
 
 st.set_page_config(
     page_title="Đơn Xin Nghỉ Phép | 请假申请",
@@ -29,7 +27,6 @@ def get_vn_now():
 
 
 def get_week_range(ref_date):
-  # Tìm Thứ 2 của tuần chứa ref_date
   monday = ref_date - timedelta(days=ref_date.weekday())
   sunday = monday + timedelta(days=6)
   return monday, sunday
@@ -59,7 +56,6 @@ def auto_translate_to_zh(text):
   return ""
 
 
-# CSS Tùy chỉnh giao diện gọn đẹp
 st.markdown(
     """
     <style>
@@ -89,13 +85,11 @@ st.markdown(
 tab1, tab2, tab3 = st.tabs([
     "📝 NGHỈ PHÉP MỚI / 申请请假",
     "📅 LỊCH NGHỈ THEO TUẦN / 周请假表",
-    "⚙️ QUẢN LÝ AD / 管理员",
+    "⚙️ SỬA / XÓA ĐƠN / 修改记录",
 ])
 
 # --- TAB 1: NGHỈ PHÉP MỚI ---
 with tab1:
-  hours_options = [f"{h:02d}:00" for h in range(24)]
-
   with st.form("form_nghi_phep", clear_on_submit=False):
     ho_ten = st.text_input("HỌ VÀ TÊN / 姓名 *")
     bo_phan = st.selectbox(
@@ -110,31 +104,18 @@ with tab1:
             "Khác / 其他",
         ],
     )
-
-    col1, col2 = st.columns(2)
-    with col1:
-      tu_ngay = st.date_input("Từ ngày / 开始日期", value=get_vn_now().date())
-      tu_gio = st.selectbox("Từ giờ / 开始时间", hours_options, index=7)  # 07:00
-    with col2:
-      den_ngay = st.date_input("Đến ngày / 结束日期", value=get_vn_now().date())
-      den_gio = st.selectbox(
-          "Đến giờ / 结束时间", hours_options, index=17
-      )  # 17:00
-
+    ngay_nghi = st.date_input("NGÀY NGHỈ / 请假日期 *", value=get_vn_now().date())
     ly_do = st.text_input("LÝ DO NGHỈ / 请假原因")
 
-    # Kiểm tra trùng lịch trước khi gửi
-    checking_date_str = tu_ngay.strftime("%d/%m/%Y")
-
-    # Đếm số người cùng bộ phận đã đăng ký trùng ngày
+    # Kiểm tra trùng lịch
+    checking_date_str = ngay_nghi.strftime("%Y-%m-%d")
     is_conflict = False
     try:
       res_check = (
           supabase.table("nghiphep")
           .select("*")
-          .eq("bo_phan", bo_phan)
+          .eq("bophan_thotien", bo_phan)
           .eq("tu_ngay", checking_date_str)
-          .neq("trang_thai", "Từ chối")
           .execute()
       )
       if len(res_check.data) >= 1:
@@ -145,14 +126,10 @@ with tab1:
     admin_pass = ""
     if is_conflict:
       st.warning(
-          f"⚠️ Ngày {checking_date_str} đã có 1 {bo_phan} đăng ký nghỉ!"
+          f"⚠️ Ngày {ngay_nghi.strftime('%d/%m/%Y')} đã có 1 {bo_phan} đăng ký nghỉ!"
       )
-      st.info(
-          "👉 Cần nhập Mật khẩu Admin để phê duyệt đăng ký thêm người thứ 2:"
-      )
-      admin_pass = st.text_input(
-          "Mật khẩu Admin / 管理员密码", type="password"
-      )
+      st.info("👉 Nhập mật khẩu để đăng ký thêm người thứ 2:")
+      admin_pass = st.text_input("Mật khẩu / 密码", type="password")
 
     submit = st.form_submit_button("🚀 GỬI ĐƠN NGHỈ PHÉP / 提交申请")
 
@@ -160,27 +137,21 @@ with tab1:
       if not ho_ten.strip():
         st.error("⚠️ Vui lòng nhập họ và tên / 请填写姓名")
       elif is_conflict and admin_pass != ADMIN_PASSWORD:
-        st.error(
-            "❌ Trùng lịch nghỉ! Mật khẩu Admin không đúng, không thể gửi đơn."
-        )
+        st.error("❌ Mật khẩu không đúng! Không thể đăng ký trùng ngày.")
       else:
         ly_do_zh = auto_translate_to_zh(ly_do.strip()) if ly_do.strip() else ""
         full_ly_do = (
             f"{ly_do.strip()} ({ly_do_zh})" if ly_do_zh else ly_do.strip()
         )
 
-        status = "Đã duyệt" if is_conflict else "Đã duyệt"
-
         new_data = {
             "ho_ten": ho_ten.strip(),
-            "bo_phan": bo_phan,
+            "bophan_thotien": bo_phan,
             "loai_nghi": loai_nghi,
-            "tu_ngay": tu_ngay.strftime("%d/%m/%Y"),
-            "tu_gio": tu_gio,
-            "den_ngay": den_ngay.strftime("%d/%m/%Y"),
-            "den_gio": den_gio,
+            "tu_ngay": checking_date_str,
+            "den_ngay": checking_date_str,
             "ly_do": full_ly_do,
-            "trang_thai": status,
+            "trang_thai": "Đã duyệt",
         }
         try:
           supabase.table("nghiphep").insert(new_data).execute()
@@ -191,57 +162,47 @@ with tab1:
 # --- TAB 2: LỊCH NGHỈ THEO TUẦN ---
 with tab2:
   now_vn = get_vn_now().date()
-
   week_choice = st.radio(
-      "Chọn tuần xem lịch / 选择周:",
+      "Chọn tuần / 选择周:",
       ["Tuần này / 本周", "Tuần sau / 下周"],
       horizontal=True,
   )
 
-  if "Tuần sau" in week_choice:
-    target_date = now_vn + timedelta(days=7)
-  else:
-    target_date = now_vn
-
+  target_date = now_vn + timedelta(days=7) if "Tuần sau" in week_choice else now_vn
   mon, sun = get_week_range(target_date)
+
   st.write(
-      f"📅 **Lịch từ Thứ 2 ({mon.strftime('%d/%m/%Y')}) đến Chủ Nhật ({sun.strftime('%d/%m/%Y')})**"
+      f"📅 **Từ Thứ 2 ({mon.strftime('%d/%m/%Y')}) đến Chủ Nhật ({sun.strftime('%d/%m/%Y')})**"
   )
 
-  # Tạo danh sách các ngày trong tuần
   days_in_week = [mon + timedelta(days=i) for i in range(7)]
   days_headers = [
-      f"T{i+2}\n({d.strftime('%d/%m')})" if i < 6 else f"CN\n({d.strftime('%d/%m')})"
+      f"T{i+2}<br>({d.strftime('%d/%m')})"
+      if i < 6
+      else f"CN<br>({d.strftime('%d/%m')})"
       for i, d in enumerate(days_in_week)
   ]
 
   try:
-    res = (
-        supabase.table("nghiphep")
-        .select("*")
-        .neq("trang_thai", "Từ chối")
-        .execute()
-    )
+    res = supabase.table("nghiphep").select("*").execute()
     df_all = pd.DataFrame(res.data)
 
     for dept in ["Thợ Điện / 电工", "Thợ Cơ Khí / 机械"]:
-      st.subheader(f"🔹 {dept}")
+      st.write(f"<b>🔹 {dept}</b>", unsafe_allow_html=True)
       row_data = []
 
       for d in days_in_week:
-        d_str = d.strftime("%d/%m/%Y")
+        d_str = d.strftime("%Y-%m-%d")
         names = []
         if not df_all.empty and "tu_ngay" in df_all.columns:
           matched = df_all[
-              (df_all["bo_phan"] == dept) & (df_all["tu_ngay"] == d_str)
+              (df_all["bophan_thotien"] == dept) & (df_all["tu_ngay"] == d_str)
           ]
           for _, r in matched.iterrows():
-            time_str = f"({r.get('tu_gio','')} - {r.get('den_gio','')})"
-            names.append(f"<b>{r['ho_ten']}</b><br><small>{time_str}</small>")
+            names.append(f"<b>{r['ho_ten']}</b>")
 
-        row_data.append("<br><br>".join(names) if names else "-")
+        row_data.append("<br>".join(names) if names else "-")
 
-      # Tạo bảng HTML hiển thị gọn đẹp
       html_table = f"""
             <table class="week-table">
                 <tr>{"".join([f"<th>{h}</th>" for h in days_headers])}</tr>
@@ -252,28 +213,74 @@ with tab2:
       st.write("")
 
   except Exception as e:
-    st.error(f"Lỗi tải dữ liệu lịch tuần: {e}")
+    st.error(f"Lỗi tải lịch tuần: {e}")
 
-# --- TAB 3: QUẢN LÝ AD ---
+# --- TAB 3: SỬA / XÓA ĐƠN ---
 with tab3:
-  ad_pass = st.text_input(
-      "Nhập mật khẩu Admin để quản lý:", type="password", key="ad_tab_pass"
+  pass_input = st.text_input(
+      "Nhập mật khẩu 023 để chỉnh sửa:", type="password"
   )
-  if ad_pass == ADMIN_PASSWORD:
-    st.success("Đã xác thực quyền Admin")
+  if pass_input == ADMIN_PASSWORD:
     try:
-      res_admin = (
+      res_edit = (
           supabase.table("nghiphep")
           .select("*")
           .order("id", desc=True)
           .execute()
       )
-      df_ad = pd.DataFrame(res_admin.data)
-      if not df_ad.empty:
-        st.dataframe(df_ad, use_container_width=True)
+      df_edit = pd.DataFrame(res_edit.data)
+
+      if not df_edit.empty:
+        st.write("📋 **Danh sách đơn đã đăng ký:**")
+        for _, row in df_edit.iterrows():
+          with st.expander(
+              f"📌 ID {row['id']}: {row['ho_ten']} - {row['bophan_thotien']} - Ngày: {row['tu_ngay']}"
+          ):
+            c1, c2 = st.columns(2)
+            with c1:
+              new_name = st.text_input(
+                  "Họ tên", value=row["ho_ten"], key=f"name_{row['id']}"
+              )
+              new_dept = st.selectbox(
+                  "Bộ phận",
+                  ["Thợ Điện / 电工", "Thợ Cơ Khí / 机械"],
+                  index=0 if "Điện" in row["bophan_thotien"] else 1,
+                  key=f"dept_{row['id']}",
+              )
+            with c2:
+              new_date = st.text_input(
+                  "Ngày nghỉ (YYYY-MM-DD)",
+                  value=row["tu_ngay"],
+                  key=f"date_{row['id']}",
+              )
+              new_reason = st.text_input(
+                  "Lý do",
+                  value=row["ly_do"] if row["ly_do"] else "",
+                  key=f"reason_{row['id']}",
+              )
+
+            col_btn1, col_btn2 = st.columns(2)
+            with col_btn1:
+              if st.button("💾 Cập nhật", key=f"btn_up_{row['id']}"):
+                supabase.table("nghiphep").update({
+                    "ho_ten": new_name,
+                    "bophan_thotien": new_dept,
+                    "tu_ngay": new_date,
+                    "den_ngay": new_date,
+                    "ly_do": new_reason,
+                }).eq("id", row["id"]).execute()
+                st.success("Đã cập nhật!")
+                st.rerun()
+            with col_btn2:
+              if st.button("🗑️ Xóa đơn", key=f"btn_del_{row['id']}"):
+                supabase.table("nghiphep").delete().eq(
+                    "id", row["id"]
+                ).execute()
+                st.warning("Đã xóa đơn!")
+                st.rerun()
       else:
-        st.info("Chưa có danh sách nghỉ phép.")
+        st.info("Chưa có đơn nghỉ phép nào.")
     except Exception as e:
       st.error(f"Lỗi: {e}")
-  elif ad_pass:
-    st.error("Mật khẩu Admin không đúng!")
+  elif pass_input:
+    st.error("Mật khẩu không đúng!")
