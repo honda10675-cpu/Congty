@@ -66,7 +66,6 @@ def auto_translate_to_zh(text):
   return ""
 
 
-# --- HÀM BẮT BUỘC TẠO CHỮ TRUNG DÙ BÁO CÁO CŨ HAY MỚI ---
 @st.cache_data(ttl=3600)
 def ensure_bilingual(text_content):
   if not text_content:
@@ -74,11 +73,9 @@ def ensure_bilingual(text_content):
 
   text_str = str(text_content).strip()
 
-  # Nếu đã có thẻ tiếng Trung hoặc HTML thì giữ nguyên
   if "<br>" in text_str or "<span" in text_str:
     return text_str
 
-  # Nếu chưa có chữ Trung (dữ liệu cũ), tiến hành dịch trực tiếp
   zh = auto_translate_to_zh(text_str)
   if zh and zh.lower() != text_str.lower():
     return (
@@ -94,6 +91,7 @@ def get_vn_now():
   return datetime.now(vn_tz)
 
 
+# --- HÀM TẠO THỜI GIAN CÓ 4 KHOẢNG TRẮNG GIỮA NGÀY VÀ GIỜ ---
 def get_rounded_time(dt):
   minute = dt.minute
   if minute < 15:
@@ -104,7 +102,19 @@ def get_rounded_time(dt):
     rounded_dt = (dt + timedelta(hours=1)).replace(
         minute=0, second=0, microsecond=0
     )
-  return rounded_dt.strftime("%d/%m/%Y %H:%M")
+  # Thêm 4 khoảng trắng (&nbsp;&nbsp;&nbsp;&nbsp;) giữa ngày và giờ
+  return rounded_dt.strftime("%d/%m/%Y") + "    " + rounded_dt.strftime("%H:%M")
+
+
+def format_tg_bao(tg_str):
+  if not tg_str:
+    return ""
+  tg_clean = str(tg_str).strip()
+  # Nếu dữ liệu cũ bị dính dền (dạng 10 ký tự ngày + 5 ký tự giờ = 15 ký tự)
+  if len(tg_clean) == 15 and " " not in tg_clean and "&nbsp;" not in tg_clean:
+    return f"{tg_clean[:10]}&nbsp;&nbsp;&nbsp;&nbsp;{tg_clean[10:]}"
+  # Thêm 4 khoảng trắng chuẩn HTML
+  return tg_clean.replace(" ", "&nbsp;&nbsp;&nbsp;&nbsp;")
 
 
 def load_data():
@@ -382,15 +392,15 @@ with tab2:
       else:
         thiet_bi_display = f"<b>{row['thiet_bi']}</b>"
 
-      # Đảm bảo hiển thị song ngữ cả cho dòng chưa có chữ Trung
       ten_su_co_display = ensure_bilingual(row["ten_su_co"])
+      tg_bao_formatted = format_tg_bao(row["thoi_gian_bao"])
 
       row_html = (
           f"<tr><td style='width: 8%; font-weight: bold;"
           f" color: #2d6a4f;'>{stt}</td><td style='width:"
           f" 22%;'>{thiet_bi_display}</td><td style='width: 42%; text-align:"
           f" left;'>{ten_su_co_display} <span style='color:#666;"
-          f" font-size:10px;'>({row['thoi_gian_bao']})</span></td><td"
+          f" font-size:10px;'>({tg_bao_formatted})</span></td><td"
           f" style='width: 28%;'>{du_kien_display}</td></tr>"
       )
       rows_list.append(row_html)
