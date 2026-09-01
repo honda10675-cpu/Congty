@@ -4,7 +4,7 @@ import streamlit as st
 from supabase import create_client
 
 SUPABASE_URL = "https://sndzaqqqrxoqlzemgboy.supabase.co"
-SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNuZHphcXFxcnhvcWx6ZW1nYm95Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgxMDM1MDMsImV4cCI6MjEwMzY3OTUwM30.N-7hXggITi6yM8VZPtDMWehb1_i1IsR6P5vDMQ6-hJg"
+SUPABASE_KEY = "DÁN_ANON_KEY_VÀO_ĐÂY"
 
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
@@ -39,18 +39,7 @@ def load_data():
     res = supabase.table("su_co").select("*").order("id", desc=False).execute()
     return pd.DataFrame(res.data)
   except Exception:
-    return pd.DataFrame(
-        columns=[
-            "id",
-            "thiet_bi",
-            "thoi_gian_bao",
-            "ten_su_co",
-            "du_kien_xong",
-            "nguoi_bao_cao",
-            "trang_thai",
-            "thoi_gian_xong",
-        ]
-    )
+    return pd.DataFrame()
 
 
 st.markdown(
@@ -150,13 +139,16 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-time_slots = [
+# Thêm tùy chọn chưa xác định thời gian lên đầu danh sách
+UNKNOWN_TIME_OPTION = "Đang sửa chữa chưa xác định thời gian"
+time_slots = [UNKNOWN_TIME_OPTION] + [
     f"{h:02d}:{m:02d}" for h in range(24) for m in (0, 30)
 ]
+
 now_vn = get_vn_now()
 default_time_str = f"{now_vn.hour:02d}:{'30' if now_vn.minute >= 30 else '00'}"
 default_index = (
-    time_slots.index(default_time_str) if default_time_str in time_slots else 0
+    time_slots.index(default_time_str) if default_time_str in time_slots else 1
 )
 
 if "reset_form" not in st.session_state:
@@ -213,44 +205,44 @@ with tab1:
       if missing_fields:
         st.error(f"⚠️ Chưa nhập: {', '.join(missing_fields)}")
       else:
+        # Xử lý định dạng lưu vào bảng
+        if gio_dk == UNKNOWN_TIME_OPTION:
+          du_kien_str = UNKNOWN_TIME_OPTION
+        else:
+          du_kien_str = f"{ngay_dk.strftime('%d/%m/%Y')} {gio_dk}"
+
         new_row = {
             "thiet_bi": thiet_bi.strip(),
             "thoi_gian_bao": get_rounded_time(get_vn_now()),
             "ten_su_co": ten_su_co.strip(),
-            "du_kien_xong": f"{ngay_dk.strftime('%d/%m/%Y')} {gio_dk}",
+            "du_kien_xong": du_kien_str,
             "nguoi_bao_cao": nguoi_bao_cao.strip(),
             "trang_thai": "Đang xử lý",
             "thoi_gian_xong": "",
         }
 
         try:
-          # Thử gửi dữ liệu không truyền ID (để Supabase tự cấp)
           supabase.table("su_co").insert(new_row).execute()
-        except Exception:
-          # Nếu Supabase chưa bật Identity, tính ID bằng tay để gửi
-          df = load_data()
-          if not df.empty and "id" in df and df["id"].notna().any():
-            new_id = int(df["id"].max() + 1)
-          else:
-            new_id = 1
-          new_row["id"] = new_id
-          supabase.table("su_co").insert(new_row).execute()
-
-        st.session_state.reset_form = True
-        st.session_state.show_success_msg = True
-        st.rerun()
+          st.session_state.reset_form = True
+          st.session_state.show_success_msg = True
+          st.rerun()
+        except Exception as e:
+          st.error(f"Lỗi gửi dữ liệu: {e}")
 
 with tab2:
   df = load_data()
 
-  if not df.empty:
+  if not df.empty and "id" in df:
     df_sorted = df.sort_values(by="id", ascending=False).reset_index(drop=True)
 
     rows_list = []
     for idx, row in df_sorted.iterrows():
       stt = f"{idx + 1}/"
       du_kien_val = str(row["du_kien_xong"])
-      if " " in du_kien_val:
+
+      if du_kien_val == UNKNOWN_TIME_OPTION:
+        du_kien_display = f"<span style='color:#d90429; font-weight:bold;'>{UNKNOWN_TIME_OPTION}</span>"
+      elif " " in du_kien_val:
         parts = du_kien_val.split(" ")
         du_kien_display = (
             f"{parts[0]}<br><span style='color:#2d6a4f;"
