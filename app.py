@@ -21,13 +21,12 @@ st.set_page_config(
 
 
 def auto_translate_to_zh(text):
-  """Dịch tiếng Việt sang Tiếng Trung kèm Pinyin (Có cơ chế chống lỗi API)"""
+  """Dịch tiếng Việt sang Tiếng Trung kèm Pinyin"""
   if not text or not text.strip():
     return ""
 
   query_text = text.strip()
 
-  # Phương pháp 1: Google GTX API chính thức cho Web
   try:
     url = f"https://translate.googleapis.com/translate_a/single?client=gtx&sl=vi&tl=zh-CN&dt=t&dt=rm&q={urllib.parse.quote(query_text)}"
     req = urllib.request.Request(
@@ -49,34 +48,15 @@ def auto_translate_to_zh(text):
       if result and len(result) > 0 and result[0]:
         for item in result[0]:
           if len(item) > 0 and item[0]:
-            # Lấy các đoạn tiếng Trung
             if isinstance(item[0], str) and not item[0].isascii():
               zh_parts.append(item[0])
-          # Lấy Pinyin từ phần tử chứa phiên âm
           if len(item) > 2 and item[2]:
             pinyin = item[2]
 
       zh_text = "".join(zh_parts).strip()
 
-      # Nếu lấy được tiếng Trung thành công
       if zh_text:
         return f"{zh_text} {pinyin}".strip() if pinyin else zh_text
-  except Exception:
-    pass
-
-  # Phương pháp 2: Dự phòng nếu cổng 1 bận hoặc lỗi mạng
-  try:
-    url_fb = f"https://translate.google.com/m?sl=vi&tl=zh-CN&q={urllib.parse.quote(query_text)}"
-    req_fb = urllib.request.Request(
-        url_fb, headers={"User-Agent": "Mozilla/5.0"}
-    )
-    with urllib.request.urlopen(req_fb, timeout=5) as resp:
-      html = resp.read().decode("utf-8")
-      from re import search
-
-      match = search(r'class="result-container">(.*?)</div>', html)
-      if match:
-        return match.group(1).strip()
   except Exception:
     pass
 
@@ -284,7 +264,6 @@ with tab1:
           ten_su_co_vi = ten_su_co.strip()
           ten_su_co_zh = auto_translate_to_zh(ten_su_co_vi)
 
-          # Đảm bảo ghép dòng 1 là tiếng Việt, dòng 2 là tiếng Trung
           if ten_su_co_zh:
             full_su_co_bilingual = (
                 f"{ten_su_co_vi}<br><span"
@@ -442,6 +421,53 @@ with tab2:
             st.error("🔑 Sai mật khẩu / 密码错误!")
     else:
       st.info("Hiện không có sự cố nào đang chờ xử lý / 暂无待处理故障。")
+
+    # MỤC CHỈNH SỬA NỘI DUNG KHI KHAI BÁO SAI
+    with st.expander("✏️ Sửa nội dung báo cáo sai / 修改错误申报"):
+      edit_options = {}
+      for _, row in df_sorted.iterrows():
+        clean_name = (
+            str(row["ten_su_co"])
+            .replace("<br>", " ")
+            .replace("<span style='color:#555;'>", "")
+            .replace("</span>", "")
+        )
+        edit_options[f"{row['thiet_bi']} - {clean_name}"] = row["id"]
+
+      selected_edit = st.selectbox(
+          "Chọn sự cố cần sửa / 选择要修改的故障:", list(edit_options.keys())
+      )
+      target_edit_id = int(edit_options[selected_edit])
+      edit_row = df_sorted[df_sorted["id"] == target_edit_id].iloc[0]
+
+      # Tách riêng nội dung tiếng Việt ban đầu
+      raw_su_co = str(edit_row["ten_su_co"]).split("<br>")[0]
+
+      new_tb = st.text_input("Tên máy mới / 新设备名:", value=edit_row["thiet_bi"])
+      new_sc_vi = st.text_input("Tên sự cố tiếng Việt mới / 新故障名称:", value=raw_su_co)
+      edit_pass = st.text_input("Mật khẩu xác nhận / 密码 (230):", type="password", key="edit_pwd")
+
+      if st.button("💾 CẬP NHẬT LẠI / 更新"):
+        if edit_pass == "230":
+          with st.spinner("Đang cập nhật và dịch lại..."):
+            zh_trans = auto_translate_to_zh(new_sc_vi.strip())
+            if zh_trans:
+              new_full_sc = (
+                  f"{new_sc_vi.strip()}<br><span"
+                  f" style='color:#555;'>{zh_trans}</span>"
+              )
+            else:
+              new_full_sc = new_sc_vi.strip()
+
+            supabase.table("su_co").update({
+                "thiet_bi": new_tb.strip(),
+                "ten_su_co": new_full_sc,
+            }).eq("id", target_edit_id).execute()
+
+            st.success("✅ Đã sửa thành công / 修改成功！")
+            st.rerun()
+        else:
+          st.error("🔑 Sai mật khẩu / 密码错误!")
 
     with st.expander("🔑 Admin xóa sự cố / 管理员删除"):
       admin_pass = st.text_input("Mật khẩu Admin / 管理员密码:", type="password")
