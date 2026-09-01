@@ -2,6 +2,8 @@ import json
 from datetime import datetime, timedelta, timezone
 import urllib.parse
 import urllib.request
+
+from deep_translator import GoogleTranslator
 import pandas as pd
 import streamlit as st
 import streamlit.components.v1 as components
@@ -9,7 +11,7 @@ from supabase import create_client
 
 # --- CẤU HÌNH SUPABASE ---
 SUPABASE_URL = "https://sndzaqqqrxoqlzemgboy.supabase.co"
-SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNuZHphcXFxcnhvcWx6ZW1nYm95Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgxMDM1MDMsImV4cCI6MjEwMzY3OTUwM30.N-7hXggITi6yM8VZPtDMWehb1_i1IsR6P5vDMQ6-hJg"  # Thay bằng Anon Key chuẩn của bạn
+SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNuZHphcXFxcnhvcWx6ZW1nYm95Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgxMDM1MDMsImV4cCI6MjEwMzY3OTUwM30.N-7hXggITi6yM8VZPtDMWehb1_i1IsR6P5vDMQ6-hJg"  # Thay bằng Anon Key của bạn
 
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
@@ -21,13 +23,24 @@ st.set_page_config(
 )
 
 
+# --- HÀM TỰ ĐỘNG DỊCH SONG NGỮ (KHÔNG PINYIN) ---
 def auto_translate_to_zh(text):
-  """Dịch tiếng Việt sang Tiếng Trung (Thuần chữ Hán, không Pinyin)"""
   if not text or not text.strip():
     return ""
 
   query_text = text.strip()
 
+  # Ưu tiên 1: Dùng deep-translator (GoogleTranslator)
+  try:
+    translated = GoogleTranslator(source="vi", target="zh-CN").translate(
+        query_text
+    )
+    if translated:
+      return translated.strip()
+  except Exception:
+    pass
+
+  # Ưu tiên 2: Dự phòng API Google Translate
   try:
     url = f"https://translate.googleapis.com/translate_a/single?client=gtx&sl=vi&tl=zh-CN&dt=t&q={urllib.parse.quote(query_text)}"
     req = urllib.request.Request(
@@ -81,6 +94,7 @@ def load_data():
     return pd.DataFrame()
 
 
+# --- CSS GIAO DIỆN MOBI / BẢNG ---
 st.markdown(
     """
     <style>
@@ -130,7 +144,7 @@ st.markdown(
         word-wrap: break-word;
         font-size: 11px;
         vertical-align: middle;
-        line-height: 1.2;
+        line-height: 1.25;
     }
 
     div[data-testid="stForm"] { 
@@ -208,6 +222,7 @@ tab1, tab2 = st.tabs(
     ["📝 KHAI BÁO MỚI / 新建申报", "📊 QUẢN LÝ SỰ CỐ / 故障管理"]
 )
 
+# --- TAB 1: KHAI BÁO MỚI ---
 with tab1:
   if st.session_state.show_success_msg:
     st.success("🎉 GỬI BÁO CÁO THÀNH CÔNG / 提交成功！")
@@ -256,7 +271,8 @@ with tab1:
           ten_su_co_vi = ten_su_co.strip()
           ten_su_co_zh = auto_translate_to_zh(ten_su_co_vi)
 
-          if ten_su_co_zh:
+          # Ghép 2 dòng Việt - Trung
+          if ten_su_co_zh and ten_su_co_zh.lower() != ten_su_co_vi.lower():
             full_su_co_bilingual = (
                 f"{ten_su_co_vi}<br><span"
                 f" style='color:#555;'>{ten_su_co_zh}</span>"
@@ -287,6 +303,7 @@ with tab1:
         except Exception as e:
           st.error(f"Lỗi gửi dữ liệu / 提交错误: {e}")
 
+# --- TAB 2: QUẢN LÝ SỰ CỐ ---
 with tab2:
   df = load_data()
 
@@ -414,6 +431,7 @@ with tab2:
     else:
       st.info("Hiện không có sự cố nào đang chờ xử lý / 暂无待处理故障。")
 
+    # MỤC SỬA SỰ CỐ
     with st.expander("✏️ Sửa nội dung báo cáo sai / 修改错误申报"):
       edit_options = {}
       for _, row in df_sorted.iterrows():
@@ -445,7 +463,7 @@ with tab2:
         if edit_pass == "230":
           with st.spinner("Đang cập nhật và dịch lại..."):
             zh_trans = auto_translate_to_zh(new_sc_vi.strip())
-            if zh_trans:
+            if zh_trans and zh_trans.lower() != new_sc_vi.strip().lower():
               new_full_sc = (
                   f"{new_sc_vi.strip()}<br><span"
                   f" style='color:#555;'>{zh_trans}</span>"
@@ -463,6 +481,7 @@ with tab2:
         else:
           st.error("🔑 Sai mật khẩu / 密码错误!")
 
+    # MỤC XÓA SỰ CỐ
     with st.expander("🔑 Admin xóa sự cố / 管理员删除"):
       admin_pass = st.text_input("Mật khẩu Admin / 管理员密码:", type="password")
       del_options = {}
