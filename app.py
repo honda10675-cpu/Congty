@@ -21,7 +21,7 @@ st.set_page_config(
 
 
 def auto_translate_to_zh(text):
-  """Tự động dịch sang Tiếng Trung kèm Pinyin"""
+  """Dịch tự động tiếng Việt sang Tiếng Trung kèm Pinyin trên 1 hàng"""
   if not text or not text.strip():
     return ""
   try:
@@ -29,16 +29,26 @@ def auto_translate_to_zh(text):
     req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
     with urllib.request.urlopen(req) as response:
       result = json.loads(response.read().decode("utf-8"))
-      zh_text = result[0][0][0]
 
-      # Lấy Pinyin nếu có
+      zh_text = ""
       pinyin = ""
-      if len(result) > 0 and len(result[0]) > 1 and len(result[0][1]) > 2:
-        pinyin = result[0][1][2]
 
-      if pinyin:
-        return f"{zh_text} {pinyin}"
-      return zh_text
+      if result and len(result) > 0:
+        # Lấy văn bản tiếng Trung
+        zh_parts = [
+            item[0] for item in result[0] if item[0] and isinstance(item[0], str)
+        ]
+        zh_text = "".join(zh_parts)
+
+        # Lấy Pinyin
+        for item in result[0]:
+          if len(item) > 2 and item[2]:
+            pinyin = item[2]
+            break
+
+      if zh_text:
+        return f"{zh_text} {pinyin}".strip()
+      return text
   except Exception:
     return text
 
@@ -242,11 +252,15 @@ with tab1:
       else:
         with st.spinner("Đang dịch sang tiếng Trung..."):
           ten_su_co_zh = auto_translate_to_zh(ten_su_co.strip())
-          # Đặt tiếng Việt dòng 1, tiếng Trung dòng 2
-          full_su_co_bilingual = (
-              f"{ten_su_co.strip()}<br><span"
-              f" style='color:#555;'>{ten_su_co_zh}</span>"
-          )
+
+          # Dòng 1: Tiếng Việt, Dòng 2: Tiếng Trung + Pinyin
+          if ten_su_co_zh and ten_su_co_zh != ten_su_co.strip():
+            full_su_co_bilingual = (
+                f"{ten_su_co.strip()}<br><span"
+                f" style='color:#555;'>{ten_su_co_zh}</span>"
+            )
+          else:
+            full_su_co_bilingual = ten_su_co.strip()
 
         if str(gio_dk) == UNKNOWN_TIME_OPTION:
           du_kien_str = "Chưa xác định / 未确定"
@@ -331,25 +345,13 @@ with tab2:
       else:
         thiet_bi_display = f"<b>{row['thiet_bi']}</b>"
 
-      # Xử lý tự động tách dòng đối với các dữ liệu cũ bị trùng hoặc sai định dạng
       ten_su_co_display = str(row["ten_su_co"])
-      if "<br>" not in ten_su_co_display:
-        if "(" in ten_su_co_display and ")" in ten_su_co_display:
-          parts_sc = ten_su_co_display.split("(", 1)
-          vi_text = parts_sc[0].strip()
-          zh_text = parts_sc[1].replace(")", "").strip()
-          ten_su_co_display = (
-              f"{vi_text}<br><span style='color:#555;'>{zh_text}</span>"
-          )
-        else:
-          # Trường hợp nội dung bị lặp lại 2 lần do nhập lỗi trước đó
-          words = ten_su_co_display.split()
-          half = len(words) // 2
-          if (
-              len(words) > 2
-              and " ".join(words[:half]) == " ".join(words[half:])
-          ):
-            ten_su_co_display = " ".join(words[:half])
+
+      # Sửa hiển thị cho các dữ liệu cũ bị trùng lặp câu
+      if "<br>" in ten_su_co_display:
+        lines = ten_su_co_display.split("<br>")
+        if len(lines) >= 2 and lines[0].strip() in lines[1]:
+          ten_su_co_display = lines[0].strip()
 
       row_html = (
           f"<tr><td style='width: 8%; font-weight: bold;"
@@ -377,7 +379,6 @@ with tab2:
     st.markdown("### 🔧 XÁC NHẬN SỬA XONG MÁY / 确认维修完成")
 
     if not pending_df.empty:
-      # Chuẩn hóa tên hiển thị trong danh sách chọn để tránh lỗi vỡ giao diện dropdown
       pending_options = {}
       for _, r in pending_df.iterrows():
         clean_name = (
