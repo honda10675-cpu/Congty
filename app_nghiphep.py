@@ -9,7 +9,12 @@ from supabase import create_client
 # --- CẤU HÌNH SUPABASE ---
 SUPABASE_URL = "https://sndzaqqqrxoqlzemgboy.supabase.co"
 SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNuZHphcXFxcnhvcWx6ZW1nYm95Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MDM2MDM1MDMsImV4cCI6MjAyOTE3OTUwM30.n-7hXggITi6yM8VZPtDMWehb1_i1IsR6P5vDMQ"
+# --- CẤU HÌNH SUPABASE ---
+SUPABASE_URL = "https://sndzaqqqrxoqlzemgboy.supabase.co"
+# Dán chính xác mã anon key vừa copy ở bước 1 vào giữa hai dấu ngoặc kép
+SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNuZHphcXFxcnhvcWx6ZW1nYm95Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgxMDM1MDMsImV4cCI6MjEwMzY3OTUwM30.N-7hXggITi6yM8VZPtDMWehb1_i1IsR6P5vDMQ6-hJg" 
 
+supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 st.set_page_config(
