@@ -3,10 +3,11 @@ import json
 import pandas as pd
 import requests
 import streamlit as st
+import streamlit.components.v1 as components
 from supabase import create_client
 
 SUPABASE_URL = "https://sndzaqqqrxoqlzemgboy.supabase.co"
-SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNuZHphcXFxcnhvcWx6ZW1nYm95Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgxMDM1MDMsImV4cCI6MjEwMzY3OTUwM30.N-7hXggITi6yM8VZPtDMWehb1_i1IsR6P5vDMQ6-hJg"
+SUPABASE_KEY = "DÁN_ANON_KEY_VÀO_ĐÂY"
 
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
@@ -52,7 +53,6 @@ def insert_su_co_safe(data_dict):
       "Content-Type": "application/json; charset=utf-8",
       "Prefer": "return=minimal",
   }
-  # Mã hóa JSON UTF-8 an toàn tuyệt đối
   json_payload = json.dumps(data_dict, ensure_ascii=False).encode("utf-8")
   res = requests.post(
       endpoint, headers=headers, data=json_payload, timeout=10
@@ -62,6 +62,7 @@ def insert_su_co_safe(data_dict):
 
 st.markdown(
     """
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.min.js"></script>
     <style>
     header, footer, #MainMenu, [data-testid="stToolbar"], 
     .stAppDeployButton, [data-testid="stStatusWidget"],
@@ -85,7 +86,7 @@ st.markdown(
 
     h1 { font-size: 0.95rem !important; margin: 0 !important; font-weight: 800 !important; text-align: center; color: #1b4332; }
 
-    .mobile-table-container { width: 100%; margin-bottom: 8px; }
+    .mobile-table-container { width: 100%; margin-bottom: 8px; background: white; padding: 4px; border-radius: 4px;}
     .mobile-table {
         width: 100%;
         border-collapse: collapse;
@@ -172,6 +173,8 @@ if "reset_form" not in st.session_state:
   st.session_state.reset_form = False
 if "show_success_msg" not in st.session_state:
   st.session_state.show_success_msg = False
+if "confirm_done_id" not in st.session_state:
+  st.session_state.confirm_done_id = None
 
 if st.session_state.reset_form:
   st.session_state["input_thiet_bi"] = ""
@@ -251,6 +254,34 @@ with tab2:
   if not df.empty and "id" in df:
     df_sorted = df.sort_values(by="id", ascending=False).reset_index(drop=True)
 
+    # Nút chụp / tải ảnh bảng báo cáo
+    components.html(
+        """
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+        <button onclick="captureTable()" style="
+            background: #2d6a4f; color: white; border: none; padding: 6px 12px; 
+            border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 11px; width: 100%;
+        ">📸 TẢI ẢNH BẢNG SỰ CỐ</button>
+
+        <script>
+        function captureTable() {
+            var table = window.parent.document.querySelector(".mobile-table-container");
+            if (table) {
+                html2canvas(table).then(canvas => {
+                    var link = document.createElement('a');
+                    link.download = 'bang_su_co.png';
+                    link.href = canvas.toDataURL();
+                    link.click();
+                });
+            } else {
+                alert("Không tìm thấy bảng dữ liệu!");
+            }
+        }
+        </script>
+        """,
+        height=40,
+    )
+
     rows_list = []
     for idx, row in df_sorted.iterrows():
       stt = f"{idx + 1}/"
@@ -270,10 +301,18 @@ with tab2:
       else:
         du_kien_display = du_kien_val
 
+      # Hiển thị trạng thái đã xong hoặc chưa
+      if row["trang_thai"] == "✅ Đã xong":
+        thiet_bi_display = (
+            f"<span style='color:#2d6a4f;'>{row['thiet_bi']}</span> (Đã xong)"
+        )
+      else:
+        thiet_bi_display = f"<b>{row['thiet_bi']}</b>"
+
       row_html = (
           f"<tr><td style='width: 8%; font-weight: bold;"
-          f" color: #2d6a4f;'>{stt}</td><td style='width: 18%; font-weight:"
-          f" bold;'>{row['thiet_bi']}</td><td style='width: 46%; text-align:"
+          f" color: #2d6a4f;'>{stt}</td><td style='width:"
+          f" 22%;'>{thiet_bi_display}</td><td style='width: 42%; text-align:"
           f" left;'>{row['ten_su_co']} <span style='color:#666;"
           f" font-size:10px;'>({row['thoi_gian_bao']})</span></td><td"
           f" style='width: 28%;'>{du_kien_display}</td></tr>"
@@ -284,87 +323,66 @@ with tab2:
     table_html = (
         f'<div class="mobile-table-container"><table'
         ' class="mobile-table"><thead><tr><th style="width: 8%;">STT</th><th'
-        ' style="width: 18%;">MÁY</th><th style="width: 46%;">SỰ CỐ (TG'
+        ' style="width: 22%;">MÁY</th><th style="width: 42%;">SỰ CỐ (TG'
         ' BÁO)</th><th style="width:'
         f' 28%;">DỰ KIẾN HOÀN THÀNH</th></tr></thead><tbody>{all_rows}</tbody></table></div>'
     )
     st.markdown(table_html, unsafe_allow_html=True)
 
-    # SAO CHÉP SỰ CỐ
-    su_co_list = [
-        f"{idx + 1}/ {row['thiet_bi']} - {row['ten_su_co']} [{row['trang_thai']}]"
-        for idx, row in df_sorted.iterrows()
-    ]
-    selected_option = st.selectbox("Chọn sự cố copy:", su_co_list, index=0)
-
-    if selected_option:
-      selected_idx = su_co_list.index(selected_option)
-      selected_row = df_sorted.iloc[selected_idx]
-
-      nguoi_gui = (
-          selected_row["nguoi_bao_cao"]
-          if (
-              pd.notna(selected_row["nguoi_bao_cao"])
-              and str(selected_row["nguoi_bao_cao"]).strip()
-          )
-          else "N/A"
-      )
-
-      single_text = (
-          f"MÁY: {selected_row['thiet_bi']}\n"
-          f"THỜI GIAN BÁO: {selected_row['thoi_gian_bao']}\n"
-          f"TÊN SỰ CỐ: {selected_row['ten_su_co']}\n"
-          f"THỜI GIAN DỰ KIẾN HOÀN THÀNH: {selected_row['du_kien_xong']}\n"
-      )
-      if selected_row["trang_thai"] == "✅ Đã xong":
-        single_text += f"THỜI GIAN HOÀN THÀNH THỰC TẾ: {selected_row['thoi_gian_xong']}\n"
-      single_text += f"NGƯỜI BÁO CÁO: {nguoi_gui}"
-
-      st.code(single_text, language="text")
-
-    # XÁC NHẬN HOÀN THÀNH
+    # NÚT XÁC NHẬN SỬA XONG VỚI MẬT KHẨU 230 TRÊN MỤC MÁY
     pending_df = df_sorted[df_sorted["trang_thai"] != "✅ Đã xong"]
+
+    st.markdown("---")
+    st.markdown("### 🔧 XÁC NHẬN SỬA XONG MÁY")
+
     if not pending_df.empty:
-      done_list = [
-          f"{row['thiet_bi']} - {row['ten_su_co']}"
-          for _, row in pending_df.iterrows()
-      ]
-      selected_done = st.selectbox(
-          "Xác nhận xong:", done_list, key="done_select"
+      pending_options = {
+          f"{r['thiet_bi']} - {r['ten_su_co']}": r["id"]
+          for _, r in pending_df.iterrows()
+      }
+      selected_machine = st.selectbox(
+          "Chọn máy đã sửa xong (Có nút ✅):", list(pending_options.keys())
       )
 
-      if st.button("✅ XÁC NHẬN HOÀN THÀNH"):
-        selected_idx = done_list.index(selected_done)
-        target_id = int(pending_df.iloc[selected_idx]["id"])
-        actual_done_time = get_rounded_time(get_vn_now())
+      col_pass, col_btn = st.columns([2, 1])
+      with col_pass:
+        pwd_done = st.text_input(
+            "Mật khẩu (230):", type="password", key="pwd_done"
+        )
+      with col_btn:
+        st.markdown("<div style='height: 18px;'></div>", unsafe_allow_html=True)
+        if st.button("✅ SỬA XONG"):
+          if pwd_done == "230":
+            target_id = int(pending_options[selected_machine])
+            actual_done_time = get_rounded_time(get_vn_now())
+            supabase.table("su_co").update({
+                "trang_thai": "✅ Đã xong",
+                "thoi_gian_xong": actual_done_time,
+            }).eq("id", target_id).execute()
+            st.success(f"🎉 Đã cập nhật xong lúc: {actual_done_time}")
+            st.rerun()
+          else:
+            st.error("🔑 Sai mật khẩu!")
+    else:
+      st.info("Hiện không có sự cố nào đang chờ xử lý.")
 
-        supabase.table("su_co").update({
-            "trang_thai": "✅ Đã xong",
-            "thoi_gian_xong": actual_done_time,
-        }).eq("id", target_id).execute()
-
-        st.success(f"🎉 Đã xong lúc: {actual_done_time}")
-        st.rerun()
-
-    # ADMIN XÓA
-    with st.expander("🔑 Admin xóa"):
+    # ADMIN XÓA SỰ CỐ
+    with st.expander("🔑 Admin xóa sự cố"):
       admin_pass = st.text_input("Mật khẩu Admin:", type="password")
       del_list = [
           f"{row['thiet_bi']} - {row['ten_su_co']}"
           for _, row in df_sorted.iterrows()
       ]
-      selected_del = st.selectbox("Sự cố xóa:", del_list)
+      selected_del = st.selectbox("Chọn sự cố cần xóa:", del_list)
 
-      if st.button("❌ XÓA"):
+      if st.button("❌ XÓA SỰ CỐ"):
         if admin_pass == "230":
           del_idx = del_list.index(selected_del)
           target_id = int(df_sorted.iloc[del_idx]["id"])
-
           supabase.table("su_co").delete().eq("id", target_id).execute()
-
-          st.success("🗑️ Đã xóa!")
+          st.success("🗑️ Đã xóa sự cố thành công!")
           st.rerun()
         else:
-          st.error("🔑 Sai mật khẩu!")
+          st.error("🔑 Sai mật khẩu Admin!")
   else:
     st.info("Chưa có báo cáo sự cố nào.")
