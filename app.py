@@ -1,11 +1,12 @@
 from datetime import datetime, timedelta, timezone
-import httpx
+import json
 import pandas as pd
+import requests
 import streamlit as st
 from supabase import create_client
 
 SUPABASE_URL = "https://sndzaqqqrxoqlzemgboy.supabase.co"
-SUPABASE_KEY = "DÁN_ANON_KEY_VÀO_ĐÂY"
+SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNuZHphcXFxcnhvcWx6ZW1nYm95Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgxMDM1MDMsImV4cCI6MjEwMzY3OTUwM30.N-7hXggITi6yM8VZPtDMWehb1_i1IsR6P5vDMQ6-hJg"
 
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
@@ -43,8 +44,7 @@ def load_data():
     return pd.DataFrame()
 
 
-def insert_su_co_httpx(data_dict):
-  """Gửi dữ liệu trực tiếp qua REST API để tránh hoàn toàn lỗi mã hóa ASCII."""
+def insert_su_co_safe(data_dict):
   endpoint = f"{SUPABASE_URL}/rest/v1/su_co"
   headers = {
       "apikey": SUPABASE_KEY,
@@ -52,8 +52,12 @@ def insert_su_co_httpx(data_dict):
       "Content-Type": "application/json; charset=utf-8",
       "Prefer": "return=minimal",
   }
-  response = httpx.post(endpoint, headers=headers, json=data_dict, timeout=10.0)
-  response.raise_for_status()
+  # Mã hóa JSON UTF-8 an toàn tuyệt đối
+  json_payload = json.dumps(data_dict, ensure_ascii=False).encode("utf-8")
+  res = requests.post(
+      endpoint, headers=headers, data=json_payload, timeout=10
+  )
+  res.raise_for_status()
 
 
 st.markdown(
@@ -234,7 +238,7 @@ with tab1:
         }
 
         try:
-          insert_su_co_httpx(new_row)
+          insert_su_co_safe(new_row)
           st.session_state.reset_form = True
           st.session_state.show_success_msg = True
           st.rerun()
