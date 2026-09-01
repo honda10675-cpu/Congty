@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta, timezone
+from deep_translator import GoogleTranslator
 import pandas as pd
 import streamlit as st
 import streamlit.components.v1 as components
@@ -10,11 +11,22 @@ SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJ
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 st.set_page_config(
-    page_title="Báo Cáo Sự Cố",
+    page_title="Báo Cáo & Theo Dõi Sự Cố | 故障报告与 hát",
     page_icon="🛠️",
     layout="centered",
     initial_sidebar_state="collapsed",
 )
+
+
+def auto_translate_to_zh(text):
+  """Hàm tự động dịch tiếng Việt sang tiếng Trung Giản Thể"""
+  if not text or not text.strip():
+    return ""
+  try:
+    translated = GoogleTranslator(source="vi", target="zh-CN").translate(text)
+    return translated
+  except Exception:
+    return text
 
 
 def get_vn_now():
@@ -66,7 +78,7 @@ st.markdown(
         padding-right: 0.2rem !important; 
     }
 
-    h1 { font-size: 0.95rem !important; margin: 0 !important; font-weight: 800 !important; text-align: center; color: #1b4332; }
+    h1 { font-size: 0.9rem !important; margin: 0 !important; font-weight: 800 !important; text-align: center; color: #1b4332; }
 
     .mobile-table-container { width: 100%; margin-bottom: 8px; background: white; padding: 4px; border-radius: 4px;}
     .mobile-table {
@@ -82,7 +94,7 @@ st.markdown(
         padding: 5px 2px;
         text-align: center;
         border: 1px solid #52b788;
-        font-size: 11px;
+        font-size: 10px;
         font-weight: bold;
     }
     .mobile-table td {
@@ -124,14 +136,14 @@ st.markdown(
         color: white !important; 
         font-weight: bold !important; 
         border-radius: 5px !important; 
-        font-size: 12px !important; 
+        font-size: 11px !important; 
         height: 34px !important; 
         min-height: 34px !important;
         margin-top: 2px !important; 
     }
 
     button[data-baseweb="tab"] { 
-        font-size: 11px !important; 
+        font-size: 10px !important; 
         font-weight: bold !important; 
         padding: 2px 4px !important;
     }
@@ -140,7 +152,7 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-UNKNOWN_TIME_OPTION = "Chưa xác định thời gian"
+UNKNOWN_TIME_OPTION = "Chưa xác định thời gian / 未确定时间"
 time_slots = [UNKNOWN_TIME_OPTION] + [
     f"{h:02d}:{m:02d}" for h in range(24) for m in (0, 30)
 ]
@@ -162,58 +174,72 @@ if st.session_state.reset_form:
   st.session_state["input_nguoi_bao_cao"] = ""
   st.session_state.reset_form = False
 
-st.markdown("<h1>🛠️ BÁO CÁO & THEO DÕI SỰ CỐ</h1>", unsafe_allow_html=True)
-tab1, tab2 = st.tabs(["📝 KHAI BÁO MỚI", "📊 QUẢN LÝ SỰ CỐ"])
+st.markdown(
+    "<h1>🛠️ BÁO CÁO & THEO DÕI SỰ CỐ / 故障报告与跟踪</h1>",
+    unsafe_allow_html=True,
+)
+tab1, tab2 = st.tabs(
+    ["📝 KHAI BÁO MỚI / 新建申报", "📊 QUẢN LÝ SỰ CỐ / 故障管理"]
+)
 
 with tab1:
   if st.session_state.show_success_msg:
-    st.success("🎉 GỬI BÁO CÁO THÀNH CÔNG!")
+    st.success("🎉 GỬI BÁO CÁO THÀNH CÔNG / 提交成功！")
     st.balloons()
     st.session_state.show_success_msg = False
 
   with st.form("form_su_co", clear_on_submit=False):
-    thiet_bi = st.text_input("MÁY / THIẾT BỊ *", key="input_thiet_bi")
+    thiet_bi = st.text_input("MÁY / THIẾT BỊ / 设备 *", key="input_thiet_bi")
     ten_su_co = st.text_input(
-        "TÊN SỰ CỐ / BỆNH CỦA MÁY *", key="input_ten_su_co"
+        "TÊN SỰ CỐ / BỆNH CỦA MÁY / 故障名称 *", key="input_ten_su_co"
     )
 
     col3, col4 = st.columns(2)
     with col3:
       ngay_dk = st.date_input(
-          "Ngày dự kiến hoàn thành *", value=now_vn.date(), key="ngay_dk_input"
+          "Ngày dự kiến completion / 预计完成日期 *",
+          value=now_vn.date(),
+          key="ngay_dk_input",
       )
     with col4:
       gio_dk = st.selectbox(
-          "Giờ dự kiến hoàn thành *",
+          "Giờ dự kiến hoàn thành / 预计完成时间 *",
           time_slots,
           index=default_index,
           key="gio_dk_input",
       )
 
-    nguoi_bao_cao = st.text_input("NGƯỜI BÁO CÁO *", key="input_nguoi_bao_cao")
-    submit = st.form_submit_button("🚀 GỬI BÁO CÁO SỰ CỐ")
+    nguoi_bao_cao = st.text_input(
+        "NGƯỜI BÁO CÁO / 报告人 *", key="input_nguoi_bao_cao"
+    )
+    submit = st.form_submit_button("🚀 GỬI BÁO CÁO SỰ CỐ / 提交故障报告")
 
     if submit:
       missing_fields = []
       if not thiet_bi.strip():
-        missing_fields.append("MÁY")
+        missing_fields.append("MÁY/设备")
       if not ten_su_co.strip():
-        missing_fields.append("SỰ CỐ")
+        missing_fields.append("SỰ CỐ/故障")
       if not nguoi_bao_cao.strip():
-        missing_fields.append("NGƯỜI BÁO CÁO")
+        missing_fields.append("NGƯỜI BÁO CÁO/报告人")
 
       if missing_fields:
-        st.error(f"⚠️ Chưa nhập: {', '.join(missing_fields)}")
+        st.error(f"⚠️ Chưa nhập / 未填写: {', '.join(missing_fields)}")
       else:
+        with st.spinner("Đang tự động dịch sang tiếng Trung..."):
+          ten_su_co_zh = auto_translate_to_zh(ten_su_co.strip())
+          # Ghép song ngữ Việt - Trung
+          full_su_co_bilingual = f"{ten_su_co.strip()} ({ten_su_co_zh})"
+
         if str(gio_dk) == UNKNOWN_TIME_OPTION:
-          du_kien_str = "Chưa xác định"
+          du_kien_str = "Chưa xác định / 未确定"
         else:
           du_kien_str = f"{ngay_dk.strftime('%d/%m/%Y')} {gio_dk}"
 
         new_row = {
             "thiet_bi": str(thiet_bi).strip(),
             "thoi_gian_bao": get_rounded_time(get_vn_now()),
-            "ten_su_co": str(ten_su_co).strip(),
+            "ten_su_co": full_su_co_bilingual,
             "du_kien_xong": du_kien_str,
             "nguoi_bao_cao": str(nguoi_bao_cao).strip(),
             "trang_thai": "Đang xử lý",
@@ -226,7 +252,7 @@ with tab1:
           st.session_state.show_success_msg = True
           st.rerun()
         except Exception as e:
-          st.error(f"Lỗi gửi dữ liệu: {e}")
+          st.error(f"Lỗi gửi dữ liệu / 提交错误: {e}")
 
 with tab2:
   df = load_data()
@@ -240,7 +266,7 @@ with tab2:
         <button onclick="captureTable()" style="
             background: #2d6a4f; color: white; border: none; padding: 6px 12px; 
             border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 11px; width: 100%;
-        ">📸 TẢI ẢNH BẢNG SỰ CỐ</button>
+        ">📸 TẢI ẢNH BẢNG SỰ CỐ / 下载故障表格图片</button>
 
         <script>
         function captureTable() {
@@ -266,10 +292,10 @@ with tab2:
       stt = f"{idx + 1}/"
       du_kien_val = str(row["du_kien_xong"])
 
-      if du_kien_val == "Chưa xác định":
+      if "Chưa xác định" in du_kien_val:
         du_kien_display = (
-            "<span style='color:#d90429; font-weight:bold;'>Chưa xác"
-            " định</span>"
+            "<span style='color:#d90429; font-weight:bold;'>Chưa xác định /"
+            " 未确定</span>"
         )
       elif " " in du_kien_val:
         parts = du_kien_val.split(" ")
@@ -282,7 +308,8 @@ with tab2:
 
       if row["trang_thai"] == "✅ Đã xong":
         thiet_bi_display = (
-            f"<span style='color:#2d6a4f;'>{row['thiet_bi']}</span> (Đã xong)"
+            f"<span style='color:#2d6a4f;'>{row['thiet_bi']}</span> (Đã xong /"
+            " 已完成)"
         )
       else:
         thiet_bi_display = f"<b>{row['thiet_bi']}</b>"
@@ -301,16 +328,16 @@ with tab2:
     table_html = (
         f'<div class="mobile-table-container"><table'
         ' class="mobile-table"><thead><tr><th style="width: 8%;">STT</th><th'
-        ' style="width: 22%;">MÁY</th><th style="width: 42%;">SỰ CỐ (TG'
-        ' BÁO)</th><th style="width:'
-        f' 28%;">DỰ KIẾN HOÀN THÀNH</th></tr></thead><tbody>{all_rows}</tbody></table></div>'
+        ' style="width: 22%;">MÁY<br>设备</th><th style="width: 42%;">SỰ CỐ'
+        ' (TG BÁO)<br>故障 (时间)</th><th style="width: 28%;">DỰ KIẾN HOÀN'
+        f' THÀNH<br>预计完成</th></tr></thead><tbody>{all_rows}</tbody></table></div>'
     )
     st.markdown(table_html, unsafe_allow_html=True)
 
     pending_df = df_sorted[df_sorted["trang_thai"] != "✅ Đã xong"]
 
     st.markdown("---")
-    st.markdown("### 🔧 XÁC NHẬN SỬA XONG MÁY")
+    st.markdown("### 🔧 XÁC NHẬN SỬA XONG MÁY / 确认维修完成")
 
     if not pending_df.empty:
       pending_options = {
@@ -318,17 +345,18 @@ with tab2:
           for _, r in pending_df.iterrows()
       }
       selected_machine = st.selectbox(
-          "Chọn máy đã sửa xong:", list(pending_options.keys())
+          "Chọn máy đã sửa xong / 选择已修好的设备:",
+          list(pending_options.keys()),
       )
 
       col_pass, col_btn = st.columns([2, 1])
       with col_pass:
         pwd_done = st.text_input(
-            "Mật khẩu (230):", type="password", key="pwd_done"
+            "Mật khẩu / 密码 (230):", type="password", key="pwd_done"
         )
       with col_btn:
         st.markdown("<div style='height: 18px;'></div>", unsafe_allow_html=True)
-        if st.button("✅ SỬA XONG"):
+        if st.button("✅ SỬA XONG / 完成"):
           if pwd_done == "230":
             target_id = int(pending_options[selected_machine])
             actual_done_time = get_rounded_time(get_vn_now())
@@ -336,29 +364,33 @@ with tab2:
                 "trang_thai": "✅ Đã xong",
                 "thoi_gian_xong": actual_done_time,
             }).eq("id", target_id).execute()
-            st.success(f"🎉 Đã cập nhật xong lúc: {actual_done_time}")
+            st.success(
+                f"🎉 Đã cập nhật xong lúc: {actual_done_time} / 已更新完成"
+            )
             st.rerun()
           else:
-            st.error("🔑 Sai mật khẩu!")
+            st.error("🔑 Sai mật khẩu / 密码错误!")
     else:
-      st.info("Hiện không có sự cố nào đang chờ xử lý.")
+      st.info("Hiện không có sự cố nào đang chờ xử lý / 暂无待处理故障。")
 
-    with st.expander("🔑 Admin xóa sự cố"):
-      admin_pass = st.text_input("Mật khẩu Admin:", type="password")
+    with st.expander("🔑 Admin xóa sự cố / 管理员删除"):
+      admin_pass = st.text_input("Mật khẩu Admin / 管理员密码:", type="password")
       del_list = [
           f"{row['thiet_bi']} - {row['ten_su_co']}"
           for _, row in df_sorted.iterrows()
       ]
-      selected_del = st.selectbox("Chọn sự cố cần xóa:", del_list)
+      selected_del = st.selectbox(
+          "Chọn sự cố cần xóa / 选择要删除的故障:", del_list
+      )
 
-      if st.button("❌ XÓA SỰ CỐ"):
+      if st.button("❌ XÓA SỰ CỐ / 删除"):
         if admin_pass == "230":
           del_idx = del_list.index(selected_del)
           target_id = int(df_sorted.iloc[del_idx]["id"])
           supabase.table("su_co").delete().eq("id", target_id).execute()
-          st.success("🗑️ Đã xóa sự cố thành công!")
+          st.success("🗑️ Đã xóa sự cố thành công / 删除成功！")
           st.rerun()
         else:
-          st.error("🔑 Sai mật khẩu Admin!")
+          st.error("🔑 Sai mật khẩu Admin / 密码错误!")
   else:
-    st.info("Chưa có báo cáo sự cố nào.")
+    st.info("Chưa có báo cáo sự cố nào / 暂无故障报告。")
