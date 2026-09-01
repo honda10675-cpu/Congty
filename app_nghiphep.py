@@ -11,10 +11,11 @@ SUPABASE_URL = "https://sndzaqqqrxoqlzemgboy.supabase.co"
 SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNuZHphcXFxcnhvcWx6ZW1nYm95Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgxMDM1MDMsImV4cCI6MjEwMzY3OTUwM30.N-7hXggITi6yM8VZPtDMWehb1_i1IsR6P5vDMQ6-hJg"
 
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
-ADMIN_PASSWORD = "023"  # Mật khẩu quản lý / sửa / xóa
+ADMIN_PASSWORD = "023"  # Mật khẩu quản lý
 
-# --- DANH SÁCH NHÂN VIÊN (Anh có thể thêm/sửa tên nhân viên trực tiếp tại đây) ---
+# --- DANH SÁCH NHÂN VIÊN ---
 DANH_SACH_NHAN_VIEN = [
+    "-- Chọn nhân viên / 选择员工 --",
     "Trương Văn Nhiển",
     "Nguyễn Văn A",
     "Trần Văn B",
@@ -23,11 +24,17 @@ DANH_SACH_NHAN_VIEN = [
 ]
 
 st.set_page_config(
-    page_title="Đơn Xin Nghỉ Phép | 请假申请",
+    page_title="Đơn Xin Nghỉ Phép & Báo Cơm | 请假与订餐",
     page_icon="🏖️",
     layout="wide",
     initial_sidebar_state="collapsed",
 )
+
+# Quản lý tổng nhân sự mặc định trong Session State
+if "tong_dien" not in st.session_state:
+  st.session_state.tong_dien = 16
+if "tong_cokhi" not in st.session_state:
+  st.session_state.tong_cokhi = 17
 
 
 def get_vn_now():
@@ -85,26 +92,30 @@ st.markdown(
     .stApp { background-color: #f4fbf7 !important; color: #1b4332 !important; }
     .block-container { padding: 0.5rem 1rem !important; }
     h1 { font-size: 1.2rem !important; font-weight: 800 !important; text-align: center; color: #1b4332 !important; margin-bottom: 10px; }
-    .stTextInput label, .stSelectbox label, .stDateInput label { font-size: 11px !important; font-weight: bold !important; color: #1b4332 !important; }
+    .stTextInput label, .stSelectbox label, .stDateInput label, .stNumberInput label { font-size: 11px !important; font-weight: bold !important; color: #1b4332 !important; }
     .stTextInput input, div[data-baseweb="select"], div[data-baseweb="input"] { background-color: #ffffff !important; color: #1b4332 !important; border: 1.5px solid #74c69d !important; border-radius: 5px !important; font-size: 12px !important; }
     div[data-testid="stForm"] { background-color: #ffffff !important; border: 1.5px solid #52b788 !important; border-radius: 8px !important; padding: 10px !important; }
     .stButton button { background: linear-gradient(90deg, #2d6a4f 0%, #40916c 100%) !important; color: #ffffff !important; font-weight: bold !important; font-size: 12px !important; width: 100% !important; }
-    .week-table { width: 100%; border-collapse: collapse; margin-top: 10px; background-color: #fff; border-radius: 8px; overflow: hidden; }
-    .week-table th { background-color: #2d6a4f; color: white; padding: 8px; font-size: 12px; text-align: center; }
-    .week-table td { border: 1px solid #d8f3dc; padding: 8px; font-size: 11px; text-align: center; vertical-align: top; }
+    .week-table { width: 100%; border-collapse: collapse; margin-top: 5px; background-color: #fff; border-radius: 8px; overflow: hidden; }
+    .week-table th { background-color: #2d6a4f; color: white; padding: 6px; font-size: 11px; text-align: center; }
+    .week-table td { border: 1px solid #d8f3dc; padding: 6px; font-size: 11px; text-align: center; vertical-align: top; }
+    .meal-table { width: 100%; border-collapse: collapse; margin-top: 5px; background-color: #fff; border-radius: 8px; overflow: hidden; }
+    .meal-table th { background-color: #1b4332; color: white; padding: 6px; font-size: 11px; text-align: center; }
+    .meal-table td { border: 1px solid #b7e4c7; padding: 6px; font-size: 11px; text-align: center; font-weight: bold; }
     </style>
 """,
     unsafe_allow_html=True,
 )
 
 st.markdown(
-    "<h1>🏖️ QUẢN LÝ XIN NGHỈ PHÉP / 请假管理</h1>", unsafe_allow_html=True
+    "<h1>🏖️ QUẢN LÝ XIN NGHỈ PHÉP & BÁO CƠM / 请假与订餐</h1>",
+    unsafe_allow_html=True,
 )
 
 tab1, tab2, tab3 = st.tabs([
     "📝 NGHỈ PHÉP MỚI / 申请请假",
-    "📅 LỊCH NGHỈ THEO TUẦN / 周请假表",
-    "⚙️ SỬA / XÓA ĐƠN / 修改记录",
+    "📅 LỊCH NGHỈ & BÁO CƠM / 周表与订餐",
+    "⚙️ CÀI ĐẶT & SỬA ĐƠN / 设置与修改",
 ])
 
 # --- TAB 1: NGHỈ PHÉP MỚI ---
@@ -114,6 +125,7 @@ with tab1:
     bo_phan = st.selectbox(
         "BỘ PHẬN / 部门 *", ["Thợ Điện / 电工", "Thợ Cơ Khí / 机械"]
     )
+    ca_nghi = st.selectbox("CA NGHỈ / 请假班次 *", ["Ca ngày / 白班", "Ca đêm / 夜班"])
     loai_nghi = st.selectbox(
         "LOẠI NGHỈ / 请假类型 *",
         [
@@ -124,7 +136,7 @@ with tab1:
         ],
     )
     ngay_nghi = st.date_input("NGÀY NGHỈ / 请假日期 *", value=get_vn_now().date())
-    ly_do = st.text_input("LÝ DO NGHỈ / 请假原因")
+    ly_do = st.text_input("LÝ DO NGHỈ / 请假原因 *")
 
     checking_date_str = ngay_nghi.strftime("%Y-%m-%d")
 
@@ -168,18 +180,23 @@ with tab1:
     submit = st.form_submit_button("🚀 GỬI ĐƠN NGHỈ PHÉP / 提交申请")
 
     if submit:
-      if is_conflict and admin_pass != ADMIN_PASSWORD:
+      if ho_ten == "-- Chọn nhân viên / 选择员工 --":
+        st.error("⚠️ Vui lòng chọn Họ và tên! / 请选择姓名！")
+      elif not ly_do.strip():
+        st.error("⚠️ Vui lòng nhập lý do nghỉ! / 请填写请假原因！")
+      elif is_conflict and admin_pass != ADMIN_PASSWORD:
         st.error("❌ Mật khẩu không đúng! Không thể đăng ký trùng ngày.")
       else:
         ly_do_zh = auto_translate_to_zh(ly_do.strip()) if ly_do.strip() else ""
         full_ly_do = (
-            f"{ly_do.strip()} ({ly_do_zh})" if ly_do_zh else ly_do.strip()
+            f"[{ca_nghi}] {ly_do.strip()} ({ly_do_zh})"
+            if ly_do_zh
+            else f"[{ca_nghi}] {ly_do.strip()}"
         )
 
         existing_cols = get_existing_columns()
         new_data = {}
 
-        # Tự động gán đúng tên cột tên nhân viên có sẵn trong database
         if "ho_ten" in existing_cols:
           new_data["ho_ten"] = ho_ten
         if "ten_nhanvien" in existing_cols:
@@ -210,7 +227,7 @@ with tab1:
         except Exception as e:
           st.error(f"❌ Lỗi gửi dữ liệu: {e}")
 
-# --- TAB 2: LỊCH NGHỈ THEO TUẦN ---
+# --- TAB 2: LỊCH NGHỈ & BÁO CƠM ---
 with tab2:
   now_vn = get_vn_now().date()
   week_choice = st.radio(
@@ -264,6 +281,7 @@ with tab2:
         else None
     )
 
+    st.subheader("📋 1. LỊCH NGHỈ THEO TUẦN / 周请假表")
     for dept in ["Thợ Điện / 电工", "Thợ Cơ Khí / 机械"]:
       st.write(f"<b>🔹 {dept}</b>", unsafe_allow_html=True)
       row_data = []
@@ -274,7 +292,16 @@ with tab2:
         if not df_all.empty and col_bp and col_dt and col_name:
           matched = df_all[(df_all[col_bp] == dept) & (df_all[col_dt] == d_str)]
           for _, r in matched.iterrows():
-            names.append(f"<b>{r.get(col_name, '')}</b>")
+            reason_str = str(r.get("ly_do", ""))
+            ca_tag = (
+                "Ca đêm"
+                if "Ca đêm" in reason_str
+                else "Ca ngày"
+                if "Ca ngày" in reason_str
+                else ""
+            )
+            ca_disp = f" ({ca_tag})" if ca_tag else ""
+            names.append(f"<b>{r.get(col_name, '')}</b>{ca_disp}")
 
         row_data.append("<br>".join(names) if names else "-")
 
@@ -285,17 +312,90 @@ with tab2:
             </table>
             """
       st.markdown(html_table, unsafe_allow_html=True)
-      st.write("")
+
+    # --- BẢNG BÁO CƠM CA NGHỈ ---
+    st.markdown("<br>", unsafe_allow_html=True)
+    st.subheader("🍱 2. BẢNG BÁO CƠM THEO TUẦN / 周订餐表")
+
+    total_staff = st.session_state.tong_dien + st.session_state.tong_cokhi
+    st.caption(
+        f"💡 Tổng nhân sự hiện tại: **{total_staff} người** (Điện:"
+        f" {st.session_state.tong_dien}, Cơ khí: {st.session_state.tong_cokhi})"
+    )
+
+    row_com_ngay = []
+    row_com_dem = []
+
+    for d in days_in_week:
+      d_str = d.strftime("%Y-%m-%d")
+      nghi_ngay_count = 0
+      nghi_dem_count = 0
+
+      if not df_all.empty and col_dt:
+        matched = df_all[df_all[col_dt] == d_str]
+        for _, r in matched.iterrows():
+          reason_str = str(r.get("ly_do", ""))
+          if "Ca đêm" in reason_str:
+            nghi_dem_count += 1
+          else:
+            nghi_ngay_count += 1
+
+      com_ngay = (
+          (st.session_state.tong_dien // 2 + st.session_state.tong_cokhi // 2)
+          - nghi_ngay_count
+      )
+      com_dem = (
+          (total_staff - (st.session_state.tong_dien // 2 + st.session_state.tong_cokhi // 2))
+          - nghi_dem_count
+      )
+
+      row_com_ngay.append(f"<span style='color:#2d6a4f;'>{max(0, com_ngay)} suất</span>")
+      row_com_dem.append(f"<span style='color:#1b4332;'>{max(0, com_dem)} suất</span>")
+
+    meal_table_html = f"""
+        <table class="meal-table">
+            <tr>
+                <th>Ca / 班次</th>
+                {"".join([f"<th>{h}</th>" for h in days_headers])}
+            </tr>
+            <tr>
+                <td><b>☀️ Cơm Ca Ngày / 白班餐</b></td>
+                {"".join([f"<td>{cell}</td>" for cell in row_com_ngay])}
+            </tr>
+            <tr>
+                <td><b>🌙 Cơm Ca Đêm / 夜班餐</b></td>
+                {"".join([f"<td>{cell}</td>" for cell in row_com_dem])}
+            </tr>
+        </table>
+        """
+    st.markdown(meal_table_html, unsafe_allow_html=True)
 
   except Exception as e:
-    st.error(f"Lỗi tải lịch tuần: {e}")
+    st.error(f"Lỗi tải dữ liệu: {e}")
 
-# --- TAB 3: SỬA / XÓA ĐƠN ---
+# --- TAB 3: CÀI ĐẶT & SỬA ĐƠN ---
 with tab3:
   pass_input = st.text_input(
-      "Nhập mật khẩu 023 để chỉnh sửa:", type="password"
+      "🔑 Nhập mật khẩu 023 để quản lý:", type="password"
   )
   if pass_input == ADMIN_PASSWORD:
+    st.success("🔓 Đã xác thực quyền ADMIN!")
+
+    # 1. Cấu hình tổng nhân sự
+    st.write("👥 **Cấu hình tổng nhân sự mặc định:**")
+    col_d, col_ck = st.columns(2)
+    with col_d:
+      st.session_state.tong_dien = st.number_input(
+          "Tổng Thợ Điện", value=st.session_state.tong_dien, step=1
+      )
+    with col_ck:
+      st.session_state.tong_cokhi = st.number_input(
+          "Tổng Thợ Cơ Khí", value=st.session_state.tong_cokhi, step=1
+      )
+
+    st.markdown("---")
+
+    # 2. Sửa / Xóa đơn
     try:
       res_edit = (
           supabase.table("nghiphep")
