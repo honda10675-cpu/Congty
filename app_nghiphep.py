@@ -13,7 +13,7 @@ SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJ
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 ADMIN_PASSWORD = "023"  # Mật khẩu quản lý
 
-# --- DANH SÁCH 33 NHÂN VIÊN (Anh dán danh sách tên thật vào đây) ---
+# --- DANH SÁCH 33 NHÂN VIÊN ---
 DANH_SACH_NHAN_VIEN = [
     "-- Chọn nhân viên / 选择员工 --",
     # --- BỘ PHẬN THỢ ĐIỆN (16 Người) ---
@@ -137,7 +137,7 @@ with tab1:
         "CA NGHỈ / CA TĂNG CA (班次) *", ["Ca ngày / 白班", "Ca đêm / 夜班"]
     )
     loai_nghi = st.selectbox(
-        "LY DO CỤ THỂ / 类型 *",
+        "LÝ DO CỤ THỂ / 类型 *",
         [
             "Nghỉ phép năm / 年假",
             "Nghỉ việc riêng / 事假",
@@ -172,10 +172,11 @@ with tab1:
         )
 
         if col_bp and col_dt and "Xin nghỉ" in loai_don:
+          df_chk["clean_dt"] = df_chk[col_dt].astype(str).str.strip().str[:10]
           matched = df_chk[
               (df_chk[col_bp] == bo_phan)
-              & (df_chk[col_dt] == checking_date_str)
-              & (~df_chk["ly_do"].str.contains("Tăng ca", na=False))
+              & (df_chk["clean_dt"] == checking_date_str)
+              & (~df_chk["ly_do"].astype(str).str.contains("Tăng ca", na=False))
           ]
           if len(matched) >= 1:
             is_conflict = True
@@ -207,7 +208,7 @@ with tab1:
         existing_cols = get_existing_columns()
         new_data = {}
 
-        clean_name = ho_ten.split(" (")[0]  # Tách lấy tên chính
+        clean_name = ho_ten.split(" (")[0].strip()
         if "ho_ten" in existing_cols:
           new_data["ho_ten"] = clean_name
         if "ten_nhanvien" in existing_cols:
@@ -235,6 +236,7 @@ with tab1:
         try:
           supabase.table("nghiphep").insert(new_data).execute()
           st.success("🎉 Gửi đơn thành công / 提交成功！")
+          st.rerun()
         except Exception as e:
           st.error(f"❌ Lỗi gửi dữ liệu: {e}")
 
@@ -292,26 +294,28 @@ with tab2:
         else None
     )
 
-    st.subheader("📋 1. LỊCH DĂNG KÝ NGHỈ PHÉP & TĂNG CA")
+    st.subheader("📋 1. LỊCH ĐĂNG KÝ NGHỈ PHÉP & TĂNG CA")
 
     row_data = []
     count_dien_nghi = [0] * 7
     count_cokhi_nghi = [0] * 7
+
+    if not df_all.empty and col_dt:
+      df_all["clean_date"] = df_all[col_dt].astype(str).str.strip().str[:10]
 
     for idx, d in enumerate(days_in_week):
       d_str = d.strftime("%Y-%m-%d")
       entries = []
 
       if not df_all.empty and col_dt and col_name:
-        matched = df_all[df_all[col_dt] == d_str]
+        matched = df_all[df_all["clean_date"] == d_str]
         for _, r in matched.iterrows():
           reason_str = str(r.get("ly_do", ""))
           dept_str = str(r.get(col_bp, ""))
+          name_str = str(r.get(col_name, ""))
 
           is_tangca = "Tăng ca" in reason_str
-          ca_tag = (
-              "Đêm" if "Ca đêm" in reason_str else "Ngày"
-          )  # Mặc định ca ngày
+          ca_tag = "Đêm" if "Ca đêm" in reason_str else "Ngày"
           dept_tag = "Điện" if "Điện" in dept_str else "Cơ khí"
 
           if not is_tangca:
@@ -327,8 +331,8 @@ with tab2:
             tag_label = f"TăngCa-{ca_tag}"
 
           entries.append(
-              f"<b>{r.get(col_name, '')}</b> ({dept_tag})<br><span"
-              f" style='color:{color}; font-size:10px;'>[{tag_label}]</span>"
+              f"<b>{name_str}</b> ({dept_tag})<br><span style='color:{color};"
+              f" font-size:10px;'>[{tag_label}]</span>"
           )
 
       row_data.append("<br><br>".join(entries) if entries else "-")
