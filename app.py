@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta, timezone
+import json
 import pandas as pd
 import streamlit as st
 from supabase import create_client
@@ -17,10 +18,9 @@ st.set_page_config(
 
 
 def clean_text(text):
-  """Hàm xử lý mã hóa chuỗi tiếng Việt an toàn 100%"""
   if not text:
     return ""
-  return str(text).encode("utf-8", "ignore").decode("utf-8").strip()
+  return str(text).strip()
 
 
 def get_vn_now():
@@ -219,7 +219,7 @@ with tab1:
         new_row = {
             "thiet_bi": clean_text(thiet_bi),
             "thoi_gian_bao": clean_text(get_rounded_time(get_vn_now())),
-            "ten_su_co": clean_text(ten_ten_su_co := ten_su_co),
+            "ten_su_co": clean_text(ten_su_co),
             "du_kien_xong": clean_text(du_kien_str),
             "nguoi_bao_cao": clean_text(nguoi_bao_cao),
             "trang_thai": "Đang xử lý",
@@ -227,7 +227,9 @@ with tab1:
         }
 
         try:
-          supabase.table("su_co").insert(new_row).execute()
+          supabase.table("su_co").insert(
+              json.loads(json.dumps(new_row, ensure_ascii=True))
+          ).execute()
           st.session_state.reset_form = True
           st.session_state.show_success_msg = True
           st.rerun()
