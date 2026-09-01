@@ -11,7 +11,7 @@ SUPABASE_URL = "https://sndzaqqqrxoqlzemgboy.supabase.co"
 SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNuZHphcXFxcnhvcWx6ZW1nYm95Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgxMDM1MDMsImV4cCI6MjEwMzY3OTUwM30.N-7hXggITi6yM8VZPtDMWehb1_i1IsR6P5vDMQ6-hJg"
 
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
-ADMIN_PASSWORD = "023"  # Mật khẩu quản lý
+ADMIN_PASSWORD = "023"
 
 # --- DANH SÁCH 33 NHÂN VIÊN ---
 DANH_SACH_NHAN_VIEN = [
@@ -35,17 +35,14 @@ st.set_page_config(
     initial_sidebar_state="collapsed",
 )
 
-
 def get_vn_now():
   vn_tz = timezone(timedelta(hours=7))
   return datetime.now(vn_tz)
-
 
 def get_week_range(ref_date):
   monday = ref_date - timedelta(days=ref_date.weekday())
   sunday = monday + timedelta(days=6)
   return monday, sunday
-
 
 def get_existing_columns():
   try:
@@ -55,7 +52,6 @@ def get_existing_columns():
   except Exception:
     pass
   return []
-
 
 st.markdown(
     """
@@ -90,10 +86,11 @@ tab1, tab2, tab3 = st.tabs([
     "⚙️ QUẢN LÝ / 设置",
 ])
 
-# --- TAB 1: ĐĂNG KÝ TỐI GIẢN ---
+# --- TAB 1: ĐĂNG KÝ NGHỈ PHÉP ---
 with tab1:
   with st.form("form_nghi_phep", clear_on_submit=False):
     ho_ten = st.selectbox("HỌ VÀ TÊN / 姓名 *", DANH_SACH_NHAN_VIEN)
+    ca_lam = st.selectbox("CA NGHỈ / 班次 *", ["Ca ngày / 白班", "Ca đêm / 夜班"])
     loai_nghi = st.selectbox(
         "LOẠI NGHỈ / 类型 *",
         [
@@ -107,7 +104,7 @@ with tab1:
 
     checking_date_str = ngay_nghi.strftime("%Y-%m-%d")
 
-    # Kiểm tra trùng lịch
+    # Kiểm tra trùng
     is_conflict = False
     try:
       res_all = supabase.table("nghiphep").select("*").execute()
@@ -121,7 +118,7 @@ with tab1:
             else None
         )
         if col_dt:
-          df_chk["clean_dt"] = df_chk[col_dt].astype(str).str.strip().str[:10]
+          df_chk["clean_dt"] = pd.to_datetime(df_chk[col_dt], errors='coerce').dt.strftime("%Y-%m-%d")
           matched = df_chk[df_chk["clean_dt"] == checking_date_str]
           if len(matched) >= 1:
             is_conflict = True
@@ -131,10 +128,9 @@ with tab1:
     admin_pass = ""
     if is_conflict:
       st.warning(
-          f"⚠️ Ngày {ngay_nghi.strftime('%d/%m/%Y')} đã có người đăng ký"
-          " nghỉ!"
+          f"⚠️ Ngày {ngay_nghi.strftime('%d/%m/%Y')} đã có người đăng ký nghỉ!"
       )
-      st.info("👉 Nhập mật khẩu 023 nếu muốn đăng ký thêm người tiếp theo:")
+      st.info("👉 Nhập mật khẩu 023 nếu muốn duyệt thêm:")
       admin_pass = st.text_input("Mật khẩu / 密码", type="password")
 
     submit = st.form_submit_button("🚀 GỬI ĐƠN / 提交")
@@ -149,6 +145,8 @@ with tab1:
         new_data = {}
 
         clean_name = ho_ten.strip()
+        full_ly_do = f"[{ca_lam}] {loai_nghi}"
+
         if "ho_ten" in existing_cols:
           new_data["ho_ten"] = clean_name
         if "ten_nhanvien" in existing_cols:
@@ -165,7 +163,7 @@ with tab1:
         if "ngay_nghi" in existing_cols:
           new_data["ngay_nghi"] = checking_date_str
         if "ly_do" in existing_cols:
-          new_data["ly_do"] = loai_nghi
+          new_data["ly_do"] = full_ly_do
 
         try:
           supabase.table("nghiphep").insert(new_data).execute()
@@ -174,7 +172,7 @@ with tab1:
         except Exception as e:
           st.error(f"❌ Lỗi gửi dữ liệu: {e}")
 
-# --- TAB 2: LỊCH NGHỈ THEO TUẦN (1 BẢNG DUY NHẤT) ---
+# --- TAB 2: LỊCH NGHỈ THEO TUẦN ---
 with tab2:
   now_vn = get_vn_now().date()
   week_choice = st.radio(
@@ -224,7 +222,7 @@ with tab2:
     row_data = []
 
     if not df_all.empty and col_dt:
-      df_all["clean_date"] = df_all[col_dt].astype(str).str.strip().str[:10]
+      df_all["clean_date"] = pd.to_datetime(df_all[col_dt], errors='coerce').dt.strftime("%Y-%m-%d")
 
     for d in days_in_week:
       d_str = d.strftime("%Y-%m-%d")
@@ -234,8 +232,10 @@ with tab2:
         matched = df_all[df_all["clean_date"] == d_str]
         for _, r in matched.iterrows():
           name_str = str(r.get(col_name, ""))
+          reason_str = str(r.get("ly_do", ""))
+          ca_tag = "Ca đêm" if "Ca đêm" in reason_str else "Ca ngày"
           entries.append(
-              f"<span style='color:#d90429;'>👤 {name_str}</span>"
+              f"<b>{name_str}</b><br><span style='color:#d90429; font-size:11px;'>[{ca_tag}]</span>"
           )
 
       row_data.append("<br><br>".join(entries) if entries else "-")
@@ -251,7 +251,7 @@ with tab2:
   except Exception as e:
     st.error(f"Lỗi tải dữ liệu: {e}")
 
-# --- TAB 3: SỬA / XÓA ĐƠN ---
+# --- TAB 3: QUẢN LÝ ---
 with tab3:
   pass_input = st.text_input(
       "🔑 Nhập mật khẩu 023 để quản lý:", type="password"
