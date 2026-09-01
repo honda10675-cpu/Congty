@@ -16,6 +16,13 @@ st.set_page_config(
 )
 
 
+def clean_text(text):
+  """Hàm xử lý mã hóa chuỗi tiếng Việt an toàn 100%"""
+  if not text:
+    return ""
+  return str(text).encode("utf-8", "ignore").decode("utf-8").strip()
+
+
 def get_vn_now():
   vn_tz = timezone(timedelta(hours=7))
   return datetime.now(vn_tz)
@@ -210,11 +217,11 @@ with tab1:
           du_kien_str = f"{ngay_dk.strftime('%d/%m/%Y')} {gio_dk}"
 
         new_row = {
-            "thiet_bi": str(thiet_bi.strip()),
-            "thoi_gian_bao": str(get_rounded_time(get_vn_now())),
-            "ten_su_co": str(ten_su_co.strip()),
-            "du_kien_xong": str(du_kien_str),
-            "nguoi_bao_cao": str(nguoi_bao_cao.strip()),
+            "thiet_bi": clean_text(thiet_bi),
+            "thoi_gian_bao": clean_text(get_rounded_time(get_vn_now())),
+            "ten_su_co": clean_text(ten_ten_su_co := ten_su_co),
+            "du_kien_xong": clean_text(du_kien_str),
+            "nguoi_bao_cao": clean_text(nguoi_bao_cao),
             "trang_thai": "Đang xử lý",
             "thoi_gian_xong": "",
         }
@@ -318,7 +325,7 @@ with tab2:
       if st.button("✅ XÁC NHẬN HOÀN THÀNH"):
         selected_idx = done_list.index(selected_done)
         target_id = int(pending_df.iloc[selected_idx]["id"])
-        actual_done_time = get_rounded_time(get_vn_now())
+        actual_done_time = clean_text(get_rounded_time(get_vn_now()))
 
         supabase.table("su_co").update({
             "trang_thai": "✅ Đã xong",
