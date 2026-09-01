@@ -1,13 +1,11 @@
 from datetime import datetime, timedelta, timezone
-import json
 import pandas as pd
-import requests
 import streamlit as st
 import streamlit.components.v1 as components
 from supabase import create_client
 
 SUPABASE_URL = "https://sndzaqqqrxoqlzemgboy.supabase.co"
-SUPABASE_KEY = "DÁN_ANON_KEY_VÀO_ĐÂY"
+SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNuZHphcXFxcnhvcWx6ZW1nYm95Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgxMDM1MDMsImV4cCI6MjEwMzY3OTUwM30.N-7hXggITi6yM8VZPtDMWehb1_i1IsR6P5vDMQ6-hJg"
 
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
@@ -43,22 +41,6 @@ def load_data():
     return pd.DataFrame(res.data)
   except Exception:
     return pd.DataFrame()
-
-
-def insert_su_co_safe(data_dict):
-  endpoint = f"{SUPABASE_URL}/rest/v1/su_co"
-  headers = {
-      "apikey": str(SUPABASE_KEY).strip(),
-      "Authorization": f"Bearer {str(SUPABASE_KEY).strip()}",
-      "Content-Type": "application/json; charset=utf-8",
-      "Prefer": "return=minimal",
-  }
-  # Xử lý triệt để mã hóa Tiếng Việt UTF-8
-  json_bytes = json.dumps(data_dict, ensure_ascii=False).encode("utf-8")
-  res = requests.post(
-      endpoint, headers=headers, data=json_bytes, timeout=10
-  )
-  res.raise_for_status()
 
 
 st.markdown(
@@ -239,7 +221,7 @@ with tab1:
         }
 
         try:
-          insert_su_co_safe(new_row)
+          supabase.table("su_co").insert(new_row).execute()
           st.session_state.reset_form = True
           st.session_state.show_success_msg = True
           st.rerun()
