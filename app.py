@@ -21,14 +21,24 @@ st.set_page_config(
 
 
 def auto_translate_to_zh(text):
+  """Tự động dịch sang Tiếng Trung kèm Pinyin"""
   if not text or not text.strip():
     return ""
   try:
-    url = f"https://translate.googleapis.com/translate_a/single?client=gtx&sl=vi&tl=zh-CN&dt=t&q={urllib.parse.quote(text)}"
+    url = f"https://translate.googleapis.com/translate_a/single?client=gtx&sl=vi&tl=zh-CN&dt=t&dt=rm&q={urllib.parse.quote(text)}"
     req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
     with urllib.request.urlopen(req) as response:
       result = json.loads(response.read().decode("utf-8"))
-      return result[0][0][0]
+      zh_text = result[0][0][0]
+
+      # Lấy Pinyin nếu có
+      pinyin = ""
+      if len(result) > 0 and len(result[0]) > 1 and len(result[0][1]) > 2:
+        pinyin = result[0][1][2]
+
+      if pinyin:
+        return f"{zh_text} {pinyin}"
+      return zh_text
   except Exception:
     return text
 
@@ -232,7 +242,7 @@ with tab1:
       else:
         with st.spinner("Đang dịch sang tiếng Trung..."):
           ten_su_co_zh = auto_translate_to_zh(ten_su_co.strip())
-          # Xuống dòng cho phần tiếng Trung
+          # Đặt tiếng Việt dòng 1, tiếng Trung dòng 2
           full_su_co_bilingual = (
               f"{ten_su_co.strip()}<br><span"
               f" style='color:#555;'>{ten_su_co_zh}</span>"
@@ -321,19 +331,25 @@ with tab2:
       else:
         thiet_bi_display = f"<b>{row['thiet_bi']}</b>"
 
-      # Định dạng lại tiếng Trung xuống dòng nếu dữ liệu cũ còn lưu dạng ngang "(tiếng Trung)"
+      # Xử lý tự động tách dòng đối với các dữ liệu cũ bị trùng hoặc sai định dạng
       ten_su_co_display = str(row["ten_su_co"])
-      if (
-          "(" in ten_su_co_display
-          and ")" in ten_su_co_display
-          and "<br>" not in ten_su_co_display
-      ):
-        parts_sc = ten_su_co_display.split("(", 1)
-        vi_text = parts_sc[0].strip()
-        zh_text = parts_sc[1].replace(")", "").strip()
-        ten_su_co_display = (
-            f"{vi_text}<br><span style='color:#555;'>{zh_text}</span>"
-        )
+      if "<br>" not in ten_su_co_display:
+        if "(" in ten_su_co_display and ")" in ten_su_co_display:
+          parts_sc = ten_su_co_display.split("(", 1)
+          vi_text = parts_sc[0].strip()
+          zh_text = parts_sc[1].replace(")", "").strip()
+          ten_su_co_display = (
+              f"{vi_text}<br><span style='color:#555;'>{zh_text}</span>"
+          )
+        else:
+          # Trường hợp nội dung bị lặp lại 2 lần do nhập lỗi trước đó
+          words = ten_su_co_display.split()
+          half = len(words) // 2
+          if (
+              len(words) > 2
+              and " ".join(words[:half]) == " ".join(words[half:])
+          ):
+            ten_su_co_display = " ".join(words[:half])
 
       row_html = (
           f"<tr><td style='width: 8%; font-weight: bold;"
@@ -361,12 +377,17 @@ with tab2:
     st.markdown("### 🔧 XÁC NHẬN SỬA XONG MÁY / 确认维修完成")
 
     if not pending_df.empty:
-      pending_options = {
-          f"{r['thiet_bi']} - {r['ten_su_co'].replace('<br>', ' ').replace('<span style=\'color:#555;\'>', '').replace('</span>', '')}": (
-              r["id"]
-          )
-          for _, r in pending_df.iterrows()
-      }
+      # Chuẩn hóa tên hiển thị trong danh sách chọn để tránh lỗi vỡ giao diện dropdown
+      pending_options = {}
+      for _, r in pending_df.iterrows():
+        clean_name = (
+            str(r["ten_su_co"])
+            .replace("<br>", " ")
+            .replace("<span style='color:#555;'>", "")
+            .replace("</span>", "")
+        )
+        pending_options[f"{r['thiet_bi']} - {clean_name}"] = r["id"]
+
       selected_machine = st.selectbox(
           "Chọn máy đã sửa xong / 选择已修好的设备:",
           list(pending_options.keys()),
@@ -398,18 +419,23 @@ with tab2:
 
     with st.expander("🔑 Admin xóa sự cố / 管理员删除"):
       admin_pass = st.text_input("Mật khẩu Admin / 管理员密码:", type="password")
-      del_list = [
-          f"{row['thiet_bi']} - {row['ten_su_co'].replace('<br>', ' ').replace('<span style=\'color:#555;\'>', '').replace('</span>', '')}"
-          for _, row in df_sorted.iterrows()
-      ]
+      del_options = {}
+      for _, row in df_sorted.iterrows():
+        clean_name = (
+            str(row["ten_su_co"])
+            .replace("<br>", " ")
+            .replace("<span style='color:#555;'>", "")
+            .replace("</span>", "")
+        )
+        del_options[f"{row['thiet_bi']} - {clean_name}"] = row["id"]
+
       selected_del = st.selectbox(
-          "Chọn sự cố cần xóa / 选择要删除的故障:", del_list
+          "Chọn sự cố cần xóa / 选择要删除的故障:", list(del_options.keys())
       )
 
       if st.button("❌ XÓA SỰ CỐ / 删除"):
         if admin_pass == "230":
-          del_idx = del_list.index(selected_del)
-          target_id = int(df_sorted.iloc[del_idx]["id"])
+          target_id = int(del_options[selected_del])
           supabase.table("su_co").delete().eq("id", target_id).execute()
           st.success("🗑️ Đã xóa sự cố thành công / 删除成功！")
           st.rerun()
