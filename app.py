@@ -21,7 +21,6 @@ st.set_page_config(
 
 
 def auto_translate_to_zh(text):
-  """Dịch tự động tiếng Việt sang tiếng Trung bằng API Google"""
   if not text or not text.strip():
     return ""
   try:
@@ -233,8 +232,7 @@ with tab1:
       else:
         with st.spinner("Đang dịch sang tiếng Trung..."):
           ten_su_co_zh = auto_translate_to_zh(ten_su_co.strip())
-          # Ghép song ngữ dạng: Tiếng Việt / Tiếng Trung
-          full_su_co_bilingual = f"{ten_su_co.strip()} / {ten_su_co_zh}"
+          full_su_co_bilingual = f"{ten_su_co.strip()} ({ten_su_co_zh})"
 
         if str(gio_dk) == UNKNOWN_TIME_OPTION:
           du_kien_str = "Chưa xác định / 未确定"
@@ -304,9 +302,10 @@ with tab2:
         )
       elif " " in du_kien_val:
         parts = du_kien_val.split(" ")
+        # Tạo khoảng cách xa giữa Ngày và Giờ (padding-top)
         du_kien_display = (
-            f"{parts[0]}<br><span style='color:#2d6a4f;"
-            f" font-weight:bold;'>{parts[1]}</span>"
+            f"{parts[0]}<div style='margin-top: 6px; color:#2d6a4f;"
+            f" font-weight:bold;'>{parts[1]}</div>"
         )
       else:
         du_kien_display = du_kien_val
@@ -319,18 +318,14 @@ with tab2:
       else:
         thiet_bi_display = f"<b>{row['thiet_bi']}</b>"
 
-      # Hiển thị sự cố và thời gian báo rõ ràng
-      ten_su_co_val = str(row["ten_su_co"])
-      thoi_gian_bao_val = str(row["thoi_gian_bao"])
-
+      # Bỏ icon và bỏ chữ TG BÁO / 报告时间, chỉ giữ lại thời gian trong ngoặc
       row_html = (
           f"<tr><td style='width: 8%; font-weight: bold;"
           f" color: #2d6a4f;'>{stt}</td><td style='width:"
           f" 22%;'>{thiet_bi_display}</td><td style='width: 42%; text-align:"
-          f" left;'><b>{ten_su_co_val}</b><br><span style='color:#555;"
-          f" font-size:10px;'>⏱️ TG BÁO / 报告时间:"
-          f" {thoi_gian_bao_val}</span></td><td style='width:"
-          f" 28%;'>{du_kien_display}</td></tr>"
+          f" left;'>{row['ten_su_co']} <span style='color:#666;"
+          f" font-size:10px;'>({row['thoi_gian_bao']})</span></td><td"
+          f" style='width: 28%;'>{du_kien_display}</td></tr>"
       )
       rows_list.append(row_html)
 
@@ -338,8 +333,8 @@ with tab2:
     table_html = (
         f'<div class="mobile-table-container"><table'
         ' class="mobile-table"><thead><tr><th style="width: 8%;">STT</th><th'
-        ' style="width: 22%;">MÁY<br>设备</th><th style="width: 42%;">SỰ CỐ (TG'
-        ' BÁO)<br>故障 (报告时间)</th><th style="width: 28%;">DỰ KIẾN HOÀN'
+        ' style="width: 22%;">MÁY<br>设备</th><th style="width: 42%;">SỰ CỐ'
+        ' (TG BÁO)<br>故障 (时间)</th><th style="width: 28%;">DỰ KIẾN HOÀN'
         f' THÀNH<br>预计完成</th></tr></thead><tbody>{all_rows}</tbody></table></div>'
     )
     st.markdown(table_html, unsafe_allow_html=True)
