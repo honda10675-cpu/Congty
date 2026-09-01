@@ -21,36 +21,66 @@ st.set_page_config(
 
 
 def auto_translate_to_zh(text):
-  """Dịch tự động tiếng Việt sang Tiếng Trung kèm Pinyin trên 1 hàng"""
+  """Dịch tiếng Việt sang Tiếng Trung kèm Pinyin (Có cơ chế chống lỗi API)"""
   if not text or not text.strip():
     return ""
+
+  query_text = text.strip()
+
+  # Phương pháp 1: Google GTX API chính thức cho Web
   try:
-    url = f"https://translate.googleapis.com/translate_a/single?client=gtx&sl=vi&tl=zh-CN&dt=t&dt=rm&q={urllib.parse.quote(text)}"
-    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
-    with urllib.request.urlopen(req) as response:
+    url = f"https://translate.googleapis.com/translate_a/single?client=gtx&sl=vi&tl=zh-CN&dt=t&dt=rm&q={urllib.parse.quote(query_text)}"
+    req = urllib.request.Request(
+        url,
+        headers={
+            "User-Agent": (
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
+                " AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0"
+                " Safari/537.36"
+            )
+        },
+    )
+    with urllib.request.urlopen(req, timeout=5) as response:
       result = json.loads(response.read().decode("utf-8"))
 
-      zh_text = ""
+      zh_parts = []
       pinyin = ""
 
-      if result and len(result) > 0:
-        # Lấy văn bản tiếng Trung
-        zh_parts = [
-            item[0] for item in result[0] if item[0] and isinstance(item[0], str)
-        ]
-        zh_text = "".join(zh_parts)
-
-        # Lấy Pinyin
+      if result and len(result) > 0 and result[0]:
         for item in result[0]:
+          if len(item) > 0 and item[0]:
+            # Lấy các đoạn tiếng Trung
+            if isinstance(item[0], str) and not item[0].isascii():
+              zh_parts.append(item[0])
+          # Lấy Pinyin từ phần tử chứa phiên âm
           if len(item) > 2 and item[2]:
             pinyin = item[2]
-            break
 
+      zh_text = "".join(zh_parts).strip()
+
+      # Nếu lấy được tiếng Trung thành công
       if zh_text:
-        return f"{zh_text} {pinyin}".strip()
-      return text
+        return f"{zh_text} {pinyin}".strip() if pinyin else zh_text
   except Exception:
-    return text
+    pass
+
+  # Phương pháp 2: Dự phòng nếu cổng 1 bận hoặc lỗi mạng
+  try:
+    url_fb = f"https://translate.google.com/m?sl=vi&tl=zh-CN&q={urllib.parse.quote(query_text)}"
+    req_fb = urllib.request.Request(
+        url_fb, headers={"User-Agent": "Mozilla/5.0"}
+    )
+    with urllib.request.urlopen(req_fb, timeout=5) as resp:
+      html = resp.read().decode("utf-8")
+      from re import search
+
+      match = search(r'class="result-container">(.*?)</div>', html)
+      if match:
+        return match.group(1).strip()
+  except Exception:
+    pass
+
+  return ""
 
 
 def get_vn_now():
@@ -251,16 +281,17 @@ with tab1:
         st.error(f"⚠️ Chưa nhập / 未填写: {', '.join(missing_fields)}")
       else:
         with st.spinner("Đang dịch sang tiếng Trung..."):
-          ten_su_co_zh = auto_translate_to_zh(ten_su_co.strip())
+          ten_su_co_vi = ten_su_co.strip()
+          ten_su_co_zh = auto_translate_to_zh(ten_su_co_vi)
 
-          # Dòng 1: Tiếng Việt, Dòng 2: Tiếng Trung + Pinyin
-          if ten_su_co_zh and ten_su_co_zh != ten_su_co.strip():
+          # Đảm bảo ghép dòng 1 là tiếng Việt, dòng 2 là tiếng Trung
+          if ten_su_co_zh:
             full_su_co_bilingual = (
-                f"{ten_su_co.strip()}<br><span"
+                f"{ten_su_co_vi}<br><span"
                 f" style='color:#555;'>{ten_su_co_zh}</span>"
             )
           else:
-            full_su_co_bilingual = ten_su_co.strip()
+            full_su_co_bilingual = ten_su_co_vi
 
         if str(gio_dk) == UNKNOWN_TIME_OPTION:
           du_kien_str = "Chưa xác định / 未确定"
@@ -346,12 +377,6 @@ with tab2:
         thiet_bi_display = f"<b>{row['thiet_bi']}</b>"
 
       ten_su_co_display = str(row["ten_su_co"])
-
-      # Sửa hiển thị cho các dữ liệu cũ bị trùng lặp câu
-      if "<br>" in ten_su_co_display:
-        lines = ten_su_co_display.split("<br>")
-        if len(lines) >= 2 and lines[0].strip() in lines[1]:
-          ten_su_co_display = lines[0].strip()
 
       row_html = (
           f"<tr><td style='width: 8%; font-weight: bold;"
