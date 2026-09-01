@@ -1,9 +1,5 @@
-import sys
-
-# Ép mã hóa UTF-8 toàn hệ thống để không bị lỗi ký tự tiếng Việt
-sys.setdefaultencoding("utf-8") if hasattr(sys, "setdefaultencoding") else None
-
 from datetime import datetime, timedelta, timezone
+import httpx
 import pandas as pd
 import streamlit as st
 from supabase import create_client
@@ -45,6 +41,19 @@ def load_data():
     return pd.DataFrame(res.data)
   except Exception:
     return pd.DataFrame()
+
+
+def insert_su_co_httpx(data_dict):
+  """Gửi dữ liệu trực tiếp qua REST API để tránh hoàn toàn lỗi mã hóa ASCII."""
+  endpoint = f"{SUPABASE_URL}/rest/v1/su_co"
+  headers = {
+      "apikey": SUPABASE_KEY,
+      "Authorization": f"Bearer {SUPABASE_KEY}",
+      "Content-Type": "application/json; charset=utf-8",
+      "Prefer": "return=minimal",
+  }
+  response = httpx.post(endpoint, headers=headers, json=data_dict, timeout=10.0)
+  response.raise_for_status()
 
 
 st.markdown(
@@ -215,17 +224,17 @@ with tab1:
           du_kien_str = f"{ngay_dk.strftime('%d/%m/%Y')} {gio_dk}"
 
         new_row = {
-            "thiet_bi": thiet_bi.strip(),
+            "thiet_bi": str(thiet_bi).strip(),
             "thoi_gian_bao": get_rounded_time(get_vn_now()),
-            "ten_su_co": ten_su_co.strip(),
+            "ten_su_co": str(ten_su_co).strip(),
             "du_kien_xong": du_kien_str,
-            "nguoi_bao_cao": nguoi_bao_cao.strip(),
+            "nguoi_bao_cao": str(nguoi_bao_cao).strip(),
             "trang_thai": "Đang xử lý",
             "thoi_gian_xong": "",
         }
 
         try:
-          supabase.table("su_co").insert(new_row).execute()
+          insert_su_co_httpx(new_row)
           st.session_state.reset_form = True
           st.session_state.show_success_msg = True
           st.rerun()
