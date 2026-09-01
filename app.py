@@ -139,8 +139,7 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# Thêm tùy chọn chưa xác định thời gian lên đầu danh sách
-UNKNOWN_TIME_OPTION = "Đang sửa chữa chưa xác định thời gian"
+UNKNOWN_TIME_OPTION = "Chưa xác định thời gian"
 time_slots = [UNKNOWN_TIME_OPTION] + [
     f"{h:02d}:{m:02d}" for h in range(24) for m in (0, 30)
 ]
@@ -205,18 +204,17 @@ with tab1:
       if missing_fields:
         st.error(f"⚠️ Chưa nhập: {', '.join(missing_fields)}")
       else:
-        # Xử lý định dạng lưu vào bảng
-        if gio_dk == UNKNOWN_TIME_OPTION:
-          du_kien_str = UNKNOWN_TIME_OPTION
+        if str(gio_dk) == UNKNOWN_TIME_OPTION:
+          du_kien_str = "Chưa xác định"
         else:
           du_kien_str = f"{ngay_dk.strftime('%d/%m/%Y')} {gio_dk}"
 
         new_row = {
-            "thiet_bi": thiet_bi.strip(),
-            "thoi_gian_bao": get_rounded_time(get_vn_now()),
-            "ten_su_co": ten_su_co.strip(),
-            "du_kien_xong": du_kien_str,
-            "nguoi_bao_cao": nguoi_bao_cao.strip(),
+            "thiet_bi": str(thiet_bi.strip()),
+            "thoi_gian_bao": str(get_rounded_time(get_vn_now())),
+            "ten_su_co": str(ten_su_co.strip()),
+            "du_kien_xong": str(du_kien_str),
+            "nguoi_bao_cao": str(nguoi_bao_cao.strip()),
             "trang_thai": "Đang xử lý",
             "thoi_gian_xong": "",
         }
@@ -240,8 +238,11 @@ with tab2:
       stt = f"{idx + 1}/"
       du_kien_val = str(row["du_kien_xong"])
 
-      if du_kien_val == UNKNOWN_TIME_OPTION:
-        du_kien_display = f"<span style='color:#d90429; font-weight:bold;'>{UNKNOWN_TIME_OPTION}</span>"
+      if du_kien_val == "Chưa xác định":
+        du_kien_display = (
+            "<span style='color:#d90429; font-weight:bold;'>Chưa xác"
+            " định</span>"
+        )
       elif " " in du_kien_val:
         parts = du_kien_val.split(" ")
         du_kien_display = (
