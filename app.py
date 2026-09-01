@@ -1,7 +1,7 @@
 import json
-from datetime import datetime, timedelta, timezone
 import urllib.parse
 import urllib.request
+from datetime import datetime, timedelta, timezone
 import pandas as pd
 import streamlit as st
 import streamlit.components.v1 as components
@@ -9,7 +9,7 @@ from supabase import create_client
 
 # --- CẤU HÌNH SUPABASE ---
 SUPABASE_URL = "https://sndzaqqqrxoqlzemgboy.supabase.co"
-SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNuZHphcXFxcnhvcWx6ZW1nYm95Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgxMDM1MDMsImV4cCI6MjEwMzY3OTUwM30.N-7hXggITi6yM8VZPtDMWehb1_i1IsR6P5vDMQ6-hJg"  # Thay bằng Anon Key chuẩn của bạn
+SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNuZHphcXFxcnhvcWx6ZW1nYm95Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgxMDM1MDMsImV4cCI6MjEwMzY3OTUwM30.N-7hXggITi6yM8VZPtDMWehb1_i1IsR6P5vDMQ6-hJg"  # Thay bằng Anon Key chuẩn của anh
 
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
@@ -21,32 +21,58 @@ st.set_page_config(
 )
 
 
-# --- HÀM DỊCH SONG NGỮ TIẾNG TRUNG (KHÔNG PINYIN, DÙNG API TRỰC TIẾP) ---
+# --- HÀM DỊCH ĐA TẦNG (ĐẢM BẢO LUÔN DỊCH ĐƯỢC TIẾNG TRUNG) ---
 def auto_translate_to_zh(text):
   if not text or not text.strip():
     return ""
 
   query_text = text.strip()
+  headers = {
+      "User-Agent": (
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+          " (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
+      )
+  }
 
+  # Cách 1: Google Translate API (v1)
   try:
     url = f"https://translate.googleapis.com/translate_a/single?client=gtx&sl=vi&tl=zh-CN&dt=t&q={urllib.parse.quote(query_text)}"
-    req = urllib.request.Request(
-        url,
-        headers={
-            "User-Agent": (
-                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
-                " (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
-            )
-        },
-    )
-    with urllib.request.urlopen(req, timeout=5) as response:
+    req = urllib.request.Request(url, headers=headers)
+    with urllib.request.urlopen(req, timeout=4) as response:
       result = json.loads(response.read().decode("utf-8"))
-      zh_parts = []
       if result and len(result) > 0 and result[0]:
-        for item in result[0]:
-          if len(item) > 0 and item[0]:
-            zh_parts.append(item[0])
-      return "".join(zh_parts).strip()
+        zh_parts = [
+            item[0] for item in result[0] if len(item) > 0 and item[0]
+        ]
+        res = "".join(zh_parts).strip()
+        if res:
+          return res
+  except Exception:
+    pass
+
+  # Cách 2: MyMemory Translation API (Dự phòng 1)
+  try:
+    url = f"https://api.mymemory.translated.net/get?q={urllib.parse.quote(query_text)}&langpair=vi|zh-CN"
+    req = urllib.request.Request(url, headers=headers)
+    with urllib.request.urlopen(req, timeout=4) as response:
+      data = json.loads(response.read().decode("utf-8"))
+      if data and "responseData" in data and "translatedText" in data["responseData"]:
+        res = data["responseData"]["translatedText"].strip()
+        if res and res.lower() != query_text.lower():
+          return res
+  except Exception:
+    pass
+
+  # Cách 3: Lingva Translate API (Dự phòng 2)
+  try:
+    url = f"https://lingva.ml/api/v1/vi/zh/{urllib.parse.quote(query_text)}"
+    req = urllib.request.Request(url, headers=headers)
+    with urllib.request.urlopen(req, timeout=4) as response:
+      data = json.loads(response.read().decode("utf-8"))
+      if data and "translation" in data:
+        res = data["translation"].strip()
+        if res:
+          return res
   except Exception:
     pass
 
@@ -251,14 +277,14 @@ with tab1:
       if missing_fields:
         st.error(f"⚠️ Chưa nhập / 未填写: {', '.join(missing_fields)}")
       else:
-        with st.spinner("Đang xử lý dữ liệu..."):
+        with st.spinner("Đang tự động dịch sang tiếng Trung..."):
           ten_su_co_vi = ten_su_co.strip()
           ten_su_co_zh = auto_translate_to_zh(ten_su_co_vi)
 
           if ten_su_co_zh and ten_su_co_zh.lower() != ten_su_co_vi.lower():
             full_su_co_bilingual = (
                 f"{ten_su_co_vi}<br><span"
-                f" style='color:#555;'>{ten_su_co_zh}</span>"
+                f" style='color:#2d6a4f;font-weight:bold;'>{ten_su_co_zh}</span>"
             )
           else:
             full_su_co_bilingual = ten_su_co_vi
@@ -379,6 +405,7 @@ with tab2:
         clean_name = (
             str(r["ten_su_co"])
             .replace("<br>", " ")
+            .replace("<span style='color:#2d6a4f;font-weight:bold;'>", "")
             .replace("<span style='color:#555;'>", "")
             .replace("</span>", "")
         )
@@ -419,6 +446,7 @@ with tab2:
         clean_name = (
             str(row["ten_su_co"])
             .replace("<br>", " ")
+            .replace("<span style='color:#2d6a4f;font-weight:bold;'>", "")
             .replace("<span style='color:#555;'>", "")
             .replace("</span>", "")
         )
@@ -442,12 +470,12 @@ with tab2:
 
       if st.button("💾 CẬP NHẬT LẠI / 更新"):
         if edit_pass == "230":
-          with st.spinner("Đang cập nhật lại..."):
+          with st.spinner("Đang dịch và cập nhật lại..."):
             zh_trans = auto_translate_to_zh(new_sc_vi.strip())
             if zh_trans and zh_trans.lower() != new_sc_vi.strip().lower():
               new_full_sc = (
                   f"{new_sc_vi.strip()}<br><span"
-                  f" style='color:#555;'>{zh_trans}</span>"
+                  f" style='color:#2d6a4f;font-weight:bold;'>{zh_trans}</span>"
               )
             else:
               new_full_sc = new_sc_vi.strip()
@@ -469,6 +497,7 @@ with tab2:
         clean_name = (
             str(row["ten_su_co"])
             .replace("<br>", " ")
+            .replace("<span style='color:#2d6a4f;font-weight:bold;'>", "")
             .replace("<span style='color:#555;'>", "")
             .replace("</span>", "")
         )
