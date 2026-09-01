@@ -1,5 +1,9 @@
+import sys
+
+# Ép mã hóa UTF-8 toàn hệ thống để không bị lỗi ký tự tiếng Việt
+sys.setdefaultencoding("utf-8") if hasattr(sys, "setdefaultencoding") else None
+
 from datetime import datetime, timedelta, timezone
-import json
 import pandas as pd
 import streamlit as st
 from supabase import create_client
@@ -15,12 +19,6 @@ st.set_page_config(
     layout="centered",
     initial_sidebar_state="collapsed",
 )
-
-
-def clean_text(text):
-  if not text:
-    return ""
-  return str(text).strip()
 
 
 def get_vn_now():
@@ -217,19 +215,17 @@ with tab1:
           du_kien_str = f"{ngay_dk.strftime('%d/%m/%Y')} {gio_dk}"
 
         new_row = {
-            "thiet_bi": clean_text(thiet_bi),
-            "thoi_gian_bao": clean_text(get_rounded_time(get_vn_now())),
-            "ten_su_co": clean_text(ten_su_co),
-            "du_kien_xong": clean_text(du_kien_str),
-            "nguoi_bao_cao": clean_text(nguoi_bao_cao),
+            "thiet_bi": thiet_bi.strip(),
+            "thoi_gian_bao": get_rounded_time(get_vn_now()),
+            "ten_su_co": ten_su_co.strip(),
+            "du_kien_xong": du_kien_str,
+            "nguoi_bao_cao": nguoi_bao_cao.strip(),
             "trang_thai": "Đang xử lý",
             "thoi_gian_xong": "",
         }
 
         try:
-          supabase.table("su_co").insert(
-              json.loads(json.dumps(new_row, ensure_ascii=True))
-          ).execute()
+          supabase.table("su_co").insert(new_row).execute()
           st.session_state.reset_form = True
           st.session_state.show_success_msg = True
           st.rerun()
@@ -327,7 +323,7 @@ with tab2:
       if st.button("✅ XÁC NHẬN HOÀN THÀNH"):
         selected_idx = done_list.index(selected_done)
         target_id = int(pending_df.iloc[selected_idx]["id"])
-        actual_done_time = clean_text(get_rounded_time(get_vn_now()))
+        actual_done_time = get_rounded_time(get_vn_now())
 
         supabase.table("su_co").update({
             "trang_thai": "✅ Đã xong",
