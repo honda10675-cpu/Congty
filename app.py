@@ -48,21 +48,21 @@ def load_data():
 def insert_su_co_safe(data_dict):
   endpoint = f"{SUPABASE_URL}/rest/v1/su_co"
   headers = {
-      "apikey": SUPABASE_KEY,
-      "Authorization": f"Bearer {SUPABASE_KEY}",
+      "apikey": str(SUPABASE_KEY).strip(),
+      "Authorization": f"Bearer {str(SUPABASE_KEY).strip()}",
       "Content-Type": "application/json; charset=utf-8",
       "Prefer": "return=minimal",
   }
-  json_payload = json.dumps(data_dict, ensure_ascii=False).encode("utf-8")
+  # Xử lý triệt để mã hóa Tiếng Việt UTF-8
+  json_bytes = json.dumps(data_dict, ensure_ascii=False).encode("utf-8")
   res = requests.post(
-      endpoint, headers=headers, data=json_payload, timeout=10
+      endpoint, headers=headers, data=json_bytes, timeout=10
   )
   res.raise_for_status()
 
 
 st.markdown(
     """
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.min.js"></script>
     <style>
     header, footer, #MainMenu, [data-testid="stToolbar"], 
     .stAppDeployButton, [data-testid="stStatusWidget"],
@@ -173,8 +173,6 @@ if "reset_form" not in st.session_state:
   st.session_state.reset_form = False
 if "show_success_msg" not in st.session_state:
   st.session_state.show_success_msg = False
-if "confirm_done_id" not in st.session_state:
-  st.session_state.confirm_done_id = None
 
 if st.session_state.reset_form:
   st.session_state["input_thiet_bi"] = ""
@@ -254,7 +252,6 @@ with tab2:
   if not df.empty and "id" in df:
     df_sorted = df.sort_values(by="id", ascending=False).reset_index(drop=True)
 
-    # Nút chụp / tải ảnh bảng báo cáo
     components.html(
         """
         <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -301,7 +298,6 @@ with tab2:
       else:
         du_kien_display = du_kien_val
 
-      # Hiển thị trạng thái đã xong hoặc chưa
       if row["trang_thai"] == "✅ Đã xong":
         thiet_bi_display = (
             f"<span style='color:#2d6a4f;'>{row['thiet_bi']}</span> (Đã xong)"
@@ -329,7 +325,6 @@ with tab2:
     )
     st.markdown(table_html, unsafe_allow_html=True)
 
-    # NÚT XÁC NHẬN SỬA XONG VỚI MẬT KHẨU 230 TRÊN MỤC MÁY
     pending_df = df_sorted[df_sorted["trang_thai"] != "✅ Đã xong"]
 
     st.markdown("---")
@@ -341,7 +336,7 @@ with tab2:
           for _, r in pending_df.iterrows()
       }
       selected_machine = st.selectbox(
-          "Chọn máy đã sửa xong (Có nút ✅):", list(pending_options.keys())
+          "Chọn máy đã sửa xong:", list(pending_options.keys())
       )
 
       col_pass, col_btn = st.columns([2, 1])
@@ -366,7 +361,6 @@ with tab2:
     else:
       st.info("Hiện không có sự cố nào đang chờ xử lý.")
 
-    # ADMIN XÓA SỰ CỐ
     with st.expander("🔑 Admin xóa sự cố"):
       admin_pass = st.text_input("Mật khẩu Admin:", type="password")
       del_list = [
