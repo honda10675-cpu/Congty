@@ -13,6 +13,15 @@ SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJ
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 ADMIN_PASSWORD = "023"  # Mật khẩu quản lý / sửa / xóa
 
+# --- DANH SÁCH NHÂN VIÊN (Anh có thể thêm/sửa tên nhân viên trực tiếp tại đây) ---
+DANH_SACH_NHAN_VIEN = [
+    "Trương Văn Nhiển",
+    "Nguyễn Văn A",
+    "Trần Văn B",
+    "Lê Văn C",
+    "Phạm Văn D",
+]
+
 st.set_page_config(
     page_title="Đơn Xin Nghỉ Phép | 请假申请",
     page_icon="🏖️",
@@ -56,7 +65,6 @@ def auto_translate_to_zh(text):
   return ""
 
 
-# Lấy danh sách tên cột thực tế có sẵn trong bảng nghiphep
 def get_existing_columns():
   try:
     res = supabase.table("nghiphep").select("*").limit(1).execute()
@@ -102,7 +110,7 @@ tab1, tab2, tab3 = st.tabs([
 # --- TAB 1: NGHỈ PHÉP MỚI ---
 with tab1:
   with st.form("form_nghi_phep", clear_on_submit=False):
-    ho_ten = st.text_input("HỌ VÀ TÊN / 姓名 *")
+    ho_ten = st.selectbox("HỌ VÀ TÊN / 姓名 *", DANH_SACH_NHAN_VIEN)
     bo_phan = st.selectbox(
         "BỘ PHẬN / 部门 *", ["Thợ Điện / 电工", "Thợ Cơ Khí / 机械"]
     )
@@ -120,18 +128,30 @@ with tab1:
 
     checking_date_str = ngay_nghi.strftime("%Y-%m-%d")
 
-    # Kiểm tra trùng lịch
     is_conflict = False
     try:
       res_all = supabase.table("nghiphep").select("*").execute()
       if res_all.data:
         df_chk = pd.DataFrame(res_all.data)
-        # Xác định cột bộ phận & ngày nghỉ thực tế trong cơ sở dữ liệu
-        col_bp = "bophan_thotien" if "bophan_thotien" in df_chk.columns else "bo_phan" if "bo_phan" in df_chk.columns else None
-        col_dt = "tu_ngay" if "tu_ngay" in df_chk.columns else "ngay_nghi" if "ngay_nghi" in df_chk.columns else None
-        
+        col_bp = (
+            "bophan_thotien"
+            if "bophan_thotien" in df_chk.columns
+            else "bo_phan"
+            if "bo_phan" in df_chk.columns
+            else None
+        )
+        col_dt = (
+            "tu_ngay"
+            if "tu_ngay" in df_chk.columns
+            else "ngay_nghi"
+            if "ngay_nghi" in df_chk.columns
+            else None
+        )
+
         if col_bp and col_dt:
-          matched = df_chk[(df_chk[col_bp] == bo_phan) & (df_chk[col_dt] == checking_date_str)]
+          matched = df_chk[
+              (df_chk[col_bp] == bo_phan) & (df_chk[col_dt] == checking_date_str)
+          ]
           if len(matched) >= 1:
             is_conflict = True
     except Exception:
@@ -148,9 +168,7 @@ with tab1:
     submit = st.form_submit_button("🚀 GỬI ĐƠN NGHỈ PHÉP / 提交申请")
 
     if submit:
-      if not ho_ten.strip():
-        st.error("⚠️ Vui lòng nhập họ và tên / 请填写姓名")
-      elif is_conflict and admin_pass != ADMIN_PASSWORD:
+      if is_conflict and admin_pass != ADMIN_PASSWORD:
         st.error("❌ Mật khẩu không đúng! Không thể đăng ký trùng ngày.")
       else:
         ly_do_zh = auto_translate_to_zh(ly_do.strip()) if ly_do.strip() else ""
@@ -159,18 +177,32 @@ with tab1:
         )
 
         existing_cols = get_existing_columns()
-        
-        # Chỉ tạo dữ liệu cho các cột thực sự có tồn tại trong Supabase
-        new_data = {"ho_ten": ho_ten.strip()}
-        
-        if "bo_phan" in existing_cols: new_data["bo_phan"] = bo_phan
-        if "bophan_thotien" in existing_cols: new_data["bophan_thotien"] = bo_phan
-        if "loai_nghi" in existing_cols: new_data["loai_nghi"] = loai_nghi
-        if "tu_ngay" in existing_cols: new_data["tu_ngay"] = checking_date_str
-        if "den_ngay" in existing_cols: new_data["den_ngay"] = checking_date_str
-        if "ngay_nghi" in existing_cols: new_data["ngay_nghi"] = checking_date_str
-        if "ly_do" in existing_cols: new_data["ly_do"] = full_ly_do
-        if "trang_thai" in existing_cols: new_data["trang_thai"] = "Đã duyệt"
+        new_data = {}
+
+        # Tự động gán đúng tên cột tên nhân viên có sẵn trong database
+        if "ho_ten" in existing_cols:
+          new_data["ho_ten"] = ho_ten
+        if "ten_nhanvien" in existing_cols:
+          new_data["ten_nhanvien"] = ho_ten
+        if "hoten" in existing_cols:
+          new_data["hoten"] = ho_ten
+
+        if "bo_phan" in existing_cols:
+          new_data["bo_phan"] = bo_phan
+        if "bophan_thotien" in existing_cols:
+          new_data["bophan_thotien"] = bo_phan
+        if "loai_nghi" in existing_cols:
+          new_data["loai_nghi"] = loai_nghi
+        if "tu_ngay" in existing_cols:
+          new_data["tu_ngay"] = checking_date_str
+        if "den_ngay" in existing_cols:
+          new_data["den_ngay"] = checking_date_str
+        if "ngay_nghi" in existing_cols:
+          new_data["ngay_nghi"] = checking_date_str
+        if "ly_do" in existing_cols:
+          new_data["ly_do"] = full_ly_do
+        if "trang_thai" in existing_cols:
+          new_data["trang_thai"] = "Đã duyệt"
 
         try:
           supabase.table("nghiphep").insert(new_data).execute()
@@ -187,7 +219,9 @@ with tab2:
       horizontal=True,
   )
 
-  target_date = now_vn + timedelta(days=7) if "Tuần sau" in week_choice else now_vn
+  target_date = (
+      now_vn + timedelta(days=7) if "Tuần sau" in week_choice else now_vn
+  )
   mon, sun = get_week_range(target_date)
 
   st.write(
@@ -206,8 +240,29 @@ with tab2:
     res = supabase.table("nghiphep").select("*").execute()
     df_all = pd.DataFrame(res.data)
 
-    col_bp = "bophan_thotien" if "bophan_thotien" in df_all.columns else "bo_phan" if "bo_phan" in df_all.columns else None
-    col_dt = "tu_ngay" if "tu_ngay" in df_all.columns else "ngay_nghi" if "ngay_nghi" in df_all.columns else None
+    col_bp = (
+        "bophan_thotien"
+        if "bophan_thotien" in df_all.columns
+        else "bo_phan"
+        if "bo_phan" in df_all.columns
+        else None
+    )
+    col_dt = (
+        "tu_ngay"
+        if "tu_ngay" in df_all.columns
+        else "ngay_nghi"
+        if "ngay_nghi" in df_all.columns
+        else None
+    )
+    col_name = (
+        "ho_ten"
+        if "ho_ten" in df_all.columns
+        else "ten_nhanvien"
+        if "ten_nhanvien" in df_all.columns
+        else "hoten"
+        if "hoten" in df_all.columns
+        else None
+    )
 
     for dept in ["Thợ Điện / 电工", "Thợ Cơ Khí / 机械"]:
       st.write(f"<b>🔹 {dept}</b>", unsafe_allow_html=True)
@@ -216,10 +271,10 @@ with tab2:
       for d in days_in_week:
         d_str = d.strftime("%Y-%m-%d")
         names = []
-        if not df_all.empty and col_bp and col_dt:
+        if not df_all.empty and col_bp and col_dt and col_name:
           matched = df_all[(df_all[col_bp] == dept) & (df_all[col_dt] == d_str)]
           for _, r in matched.iterrows():
-            names.append(f"<b>{r.get('ho_ten','')}</b>")
+            names.append(f"<b>{r.get(col_name, '')}</b>")
 
         row_data.append("<br>".join(names) if names else "-")
 
@@ -252,19 +307,41 @@ with tab3:
 
       if not df_edit.empty:
         st.write("📋 **Danh sách đơn đã đăng ký:**")
-        col_bp = "bophan_thotien" if "bophan_thotien" in df_edit.columns else "bo_phan" if "bo_phan" in df_edit.columns else None
-        col_dt = "tu_ngay" if "tu_ngay" in df_edit.columns else "ngay_nghi" if "ngay_nghi" in df_edit.columns else None
+        col_bp = (
+            "bophan_thotien"
+            if "bophan_thotien" in df_edit.columns
+            else "bo_phan"
+            if "bo_phan" in df_edit.columns
+            else None
+        )
+        col_dt = (
+            "tu_ngay"
+            if "tu_ngay" in df_edit.columns
+            else "ngay_nghi"
+            if "ngay_nghi" in df_edit.columns
+            else None
+        )
+        col_name = (
+            "ho_ten"
+            if "ho_ten" in df_edit.columns
+            else "ten_nhanvien"
+            if "ten_nhanvien" in df_edit.columns
+            else "hoten"
+            if "hoten" in df_edit.columns
+            else None
+        )
 
         for _, row in df_edit.iterrows():
-          bp_val = row.get(col_bp, '') if col_bp else ''
-          dt_val = row.get(col_dt, '') if col_dt else ''
+          bp_val = row.get(col_bp, "") if col_bp else ""
+          dt_val = row.get(col_dt, "") if col_dt else ""
+          nm_val = row.get(col_name, "") if col_name else ""
           with st.expander(
-              f"📌 ID {row['id']}: {row.get('ho_ten','')} - {bp_val} - Ngày: {dt_val}"
+              f"📌 ID {row['id']}: {nm_val} - {bp_val} - Ngày: {dt_val}"
           ):
             c1, c2 = st.columns(2)
             with c1:
               new_name = st.text_input(
-                  "Họ tên", value=row.get("ho_ten",""), key=f"name_{row['id']}"
+                  "Họ tên", value=str(nm_val), key=f"name_{row['id']}"
               )
               new_dept = st.selectbox(
                   "Bộ phận",
@@ -280,19 +357,26 @@ with tab3:
               )
               new_reason = st.text_input(
                   "Lý do",
-                  value=str(row.get("ly_do","")),
+                  value=str(row.get("ly_do", "")),
                   key=f"reason_{row['id']}",
               )
 
             col_btn1, col_btn2 = st.columns(2)
             with col_btn1:
               if st.button("💾 Cập nhật", key=f"btn_up_{row['id']}"):
-                up_dict = {"ho_ten": new_name}
-                if col_bp: up_dict[col_bp] = new_dept
-                if col_dt: up_dict[col_dt] = new_date
-                if "ly_do" in df_edit.columns: up_dict["ly_do"] = new_reason
+                up_dict = {}
+                if col_name:
+                  up_dict[col_name] = new_name
+                if col_bp:
+                  up_dict[col_bp] = new_dept
+                if col_dt:
+                  up_dict[col_dt] = new_date
+                if "ly_do" in df_edit.columns:
+                  up_dict["ly_do"] = new_reason
 
-                supabase.table("nghiphep").update(up_dict).eq("id", row["id"]).execute()
+                supabase.table("nghiphep").update(up_dict).eq(
+                    "id", row["id"]
+                ).execute()
                 st.success("Đã cập nhật!")
                 st.rerun()
             with col_btn2:
