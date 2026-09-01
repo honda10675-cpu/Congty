@@ -232,7 +232,11 @@ with tab1:
       else:
         with st.spinner("Đang dịch sang tiếng Trung..."):
           ten_su_co_zh = auto_translate_to_zh(ten_su_co.strip())
-          full_su_co_bilingual = f"{ten_su_co.strip()} ({ten_su_co_zh})"
+          # Xuống dòng cho phần tiếng Trung
+          full_su_co_bilingual = (
+              f"{ten_su_co.strip()}<br><span"
+              f" style='color:#555;'>{ten_su_co_zh}</span>"
+          )
 
         if str(gio_dk) == UNKNOWN_TIME_OPTION:
           du_kien_str = "Chưa xác định / 未确定"
@@ -302,7 +306,6 @@ with tab2:
         )
       elif " " in du_kien_val:
         parts = du_kien_val.split(" ")
-        # Tạo khoảng cách xa giữa Ngày và Giờ (padding-top)
         du_kien_display = (
             f"{parts[0]}<div style='margin-top: 6px; color:#2d6a4f;"
             f" font-weight:bold;'>{parts[1]}</div>"
@@ -318,12 +321,25 @@ with tab2:
       else:
         thiet_bi_display = f"<b>{row['thiet_bi']}</b>"
 
-      # Bỏ icon và bỏ chữ TG BÁO / 报告时间, chỉ giữ lại thời gian trong ngoặc
+      # Định dạng lại tiếng Trung xuống dòng nếu dữ liệu cũ còn lưu dạng ngang "(tiếng Trung)"
+      ten_su_co_display = str(row["ten_su_co"])
+      if (
+          "(" in ten_su_co_display
+          and ")" in ten_su_co_display
+          and "<br>" not in ten_su_co_display
+      ):
+        parts_sc = ten_su_co_display.split("(", 1)
+        vi_text = parts_sc[0].strip()
+        zh_text = parts_sc[1].replace(")", "").strip()
+        ten_su_co_display = (
+            f"{vi_text}<br><span style='color:#555;'>{zh_text}</span>"
+        )
+
       row_html = (
           f"<tr><td style='width: 8%; font-weight: bold;"
           f" color: #2d6a4f;'>{stt}</td><td style='width:"
           f" 22%;'>{thiet_bi_display}</td><td style='width: 42%; text-align:"
-          f" left;'>{row['ten_su_co']} <span style='color:#666;"
+          f" left;'>{ten_su_co_display} <span style='color:#666;"
           f" font-size:10px;'>({row['thoi_gian_bao']})</span></td><td"
           f" style='width: 28%;'>{du_kien_display}</td></tr>"
       )
@@ -346,7 +362,9 @@ with tab2:
 
     if not pending_df.empty:
       pending_options = {
-          f"{r['thiet_bi']} - {r['ten_su_co']}": r["id"]
+          f"{r['thiet_bi']} - {r['ten_su_co'].replace('<br>', ' ').replace('<span style=\'color:#555;\'>', '').replace('</span>', '')}": (
+              r["id"]
+          )
           for _, r in pending_df.iterrows()
       }
       selected_machine = st.selectbox(
@@ -381,7 +399,7 @@ with tab2:
     with st.expander("🔑 Admin xóa sự cố / 管理员删除"):
       admin_pass = st.text_input("Mật khẩu Admin / 管理员密码:", type="password")
       del_list = [
-          f"{row['thiet_bi']} - {row['ten_su_co']}"
+          f"{row['thiet_bi']} - {row['ten_su_co'].replace('<br>', ' ').replace('<span style=\'color:#555;\'>', '').replace('</span>', '')}"
           for _, row in df_sorted.iterrows()
       ]
       selected_del = st.selectbox(
